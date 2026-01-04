@@ -120,16 +120,17 @@ def get_case_detail(case_id):
     except Exception:
         return None
 
-@st.cache_data(ttl=60, show_spinner=False)  # 临时改为60秒方便测试
+@st.cache_data(ttl=3600, show_spinner=False)
 def get_all_sample_cases():
     """获取所有病例数据（带缓存）"""
-    # 先尝试从Elasticsearch获取
-    try:
-        cases = search_cases("", None)
-        if cases:
-            return cases
-    except:
-        pass
+    # 暂时禁用Elasticsearch，使用本地丰富的示例数据
+    # TODO: 后续需要将丰富的数据同步到Elasticsearch
+    # try:
+    #     cases = search_cases("", None)
+    #     if cases:
+    #         return cases
+    # except:
+    #     pass
     
     # 返回示例数据
     return [
