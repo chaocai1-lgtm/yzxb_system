@@ -731,7 +731,7 @@ def main():
     
     # 导航按钮行
     if user['role'] == 'teacher':
-        nav_cols = st.columns([1, 1, 1, 1, 1, 1, 1])
+        nav_cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1])
         with nav_cols[0]:
             if st.button("🏠 首页", key="nav_home_t", use_container_width=True):
                 st.session_state.current_page = 'home'
@@ -748,9 +748,12 @@ def main():
             if st.button("💬 互动数据", key="nav_int_t", use_container_width=True):
                 st.session_state.current_page = 'interaction_analytics'
         with nav_cols[5]:
+            if st.button("📊 数据管理", key="nav_data_t", use_container_width=True):
+                st.session_state.current_page = 'data_management'
+        with nav_cols[6]:
             if st.button("⚙️ 系统设置", key="nav_settings_t", use_container_width=True):
                 st.session_state.current_page = 'system_settings'
-        with nav_cols[6]:
+        with nav_cols[7]:
             if st.button("🚪 退出登录", key="nav_logout_t", use_container_width=True):
                 logout()
                 st.rerun()
@@ -783,7 +786,7 @@ def main():
     
     # 使用错误处理防止页面卡住
     try:
-        # 教师端和学生端分开处理
+        # 教师端直接显示数据概览
         if user['role'] == 'teacher':
             # 教师端直接显示数据概览
             if current == 'home':
@@ -796,6 +799,8 @@ def main():
                 render_module_analytics("能力推荐")
             elif current == 'interaction_analytics':
                 render_module_analytics("课中互动")
+            elif current == 'data_management':
+                render_data_management()
             elif current == 'system_settings':
                 render_system_settings()
             else:
@@ -1401,6 +1406,312 @@ def render_module_analytics(module_name):
                 st.error(f"获取排行榜失败: {e}")
         else:
             st.info("需要连接数据库查看排行榜")
+
+def render_data_management():
+    """渲染数据管理页面"""
+    import pandas as pd
+    import io
+    from modules.auth import get_neo4j_driver, check_neo4j_available
+    
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                padding: 30px; border-radius: 16px; margin-bottom: 30px;">
+        <h2 style="margin: 0; color: white;">📊 数据管理中心</h2>
+        <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9);">
+            导出、查看和管理系统数据
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    has_neo4j = check_neo4j_available()
+    
+    if not has_neo4j:
+        st.warning("⚠️ 数据库连接不可用，无法进行数据管理操作")
+        return
+    
+    # 创建选项卡
+    tab1, tab2, tab3 = st.tabs(["📥 数据导出", "👥 学生管理", "📝 活动记录管理"])
+    
+    # ===== 数据导出 =====
+    with tab1:
+        st.markdown("### 📥 导出数据")
+        st.info("💡 选择需要导出的数据类型，点击下载按钮即可获取CSV文件")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 📊 学生数据导出")
+            if st.button("📥 导出所有学生数据", key="export_students", use_container_width=True):
+                with st.spinner("正在导出学生数据..."):
+                    try:
+                        driver = get_neo4j_driver()
+                        with driver.session() as session:
+                            result = session.run("""
+                                MATCH (s:yzbx_Student)
+                                OPTIONAL MATCH (s)-[r:PERFORMED]->(a:yzbx_Activity)
+                                WITH s, count(r) as activity_count, 
+                                     max(a.timestamp) as last_activity
+                                RETURN s.student_id as 学号, 
+                                       s.name as 姓名,
+                                       COALESCE(s.login_count, 0) as 登录次数,
+                                       activity_count as 学习记录数,
+                                       toString(s.last_login) as 最后登录时间,
+                                       toString(last_activity) as 最后学习时间
+                                ORDER BY s.student_id
+                            """)
+                            data = [dict(record) for record in result]
+                        
+                        if data:
+                            df = pd.DataFrame(data)
+                            csv = df.to_csv(index=False, encoding='utf-8-sig')
+                            st.download_button(
+                                label="⬇️ 下载学生数据 CSV",
+                                data=csv,
+                                file_name=f"学生数据_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv",
+                                key="download_students"
+                            )
+                            st.success(f"✅ 成功导出 {len(data)} 条学生记录")
+                            st.dataframe(df, use_container_width=True)
+                        else:
+                            st.warning("没有找到学生数据")
+                    except Exception as e:
+                        st.error(f"导出失败: {e}")
+        
+        with col2:
+            st.markdown("#### 📝 学习记录导出")
+            if st.button("📥 导出所有学习记录", key="export_activities", use_container_width=True):
+                with st.spinner("正在导出学习记录..."):
+                    try:
+                        driver = get_neo4j_driver()
+                        with driver.session() as session:
+                            result = session.run("""
+                                MATCH (s:yzbx_Student)-[r:PERFORMED]->(a:yzbx_Activity)
+                                RETURN s.student_id as 学号,
+                                       s.name as 姓名,
+                                       a.module_name as 学习模块,
+                                       a.activity_type as 活动类型,
+                                       a.content_name as 内容名称,
+                                       toString(a.timestamp) as 学习时间,
+                                       a.details as 详情
+                                ORDER BY a.timestamp DESC
+                            """)
+                            data = [dict(record) for record in result]
+                        
+                        if data:
+                            df = pd.DataFrame(data)
+                            csv = df.to_csv(index=False, encoding='utf-8-sig')
+                            st.download_button(
+                                label="⬇️ 下载学习记录 CSV",
+                                data=csv,
+                                file_name=f"学习记录_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv",
+                                key="download_activities"
+                            )
+                            st.success(f"✅ 成功导出 {len(data)} 条学习记录")
+                            st.dataframe(df.head(100), use_container_width=True)
+                            if len(data) > 100:
+                                st.info(f"预览显示前100条，共{len(data)}条记录")
+                        else:
+                            st.warning("没有找到学习记录")
+                    except Exception as e:
+                        st.error(f"导出失败: {e}")
+        
+        st.markdown("---")
+        
+        # 按模块导出
+        st.markdown("#### 📂 按模块导出学习记录")
+        module_col1, module_col2, module_col3, module_col4 = st.columns(4)
+        
+        modules = ["病例库", "知识图谱", "能力推荐", "课中互动"]
+        for i, module in enumerate(modules):
+            with [module_col1, module_col2, module_col3, module_col4][i]:
+                if st.button(f"📥 {module}", key=f"export_{module}", use_container_width=True):
+                    with st.spinner(f"正在导出{module}数据..."):
+                        try:
+                            driver = get_neo4j_driver()
+                            with driver.session() as session:
+                                result = session.run("""
+                                    MATCH (s:yzbx_Student)-[r:PERFORMED]->(a:yzbx_Activity)
+                                    WHERE a.module_name = $module
+                                    RETURN s.student_id as 学号,
+                                           s.name as 姓名,
+                                           a.activity_type as 活动类型,
+                                           a.content_name as 内容名称,
+                                           toString(a.timestamp) as 学习时间,
+                                           a.details as 详情
+                                    ORDER BY a.timestamp DESC
+                                """, module=module)
+                                data = [dict(record) for record in result]
+                            
+                            if data:
+                                df = pd.DataFrame(data)
+                                csv = df.to_csv(index=False, encoding='utf-8-sig')
+                                st.download_button(
+                                    label=f"⬇️ 下载{module}数据",
+                                    data=csv,
+                                    file_name=f"{module}_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                    mime="text/csv",
+                                    key=f"download_{module}"
+                                )
+                                st.success(f"✅ {module}记录: {len(data)}条")
+                            else:
+                                st.warning(f"{module}暂无数据")
+                        except Exception as e:
+                            st.error(f"导出失败: {e}")
+    
+    # ===== 学生管理 =====
+    with tab2:
+        st.markdown("### 👥 学生管理")
+        
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            st.markdown("#### 📋 学生列表")
+            try:
+                driver = get_neo4j_driver()
+                with driver.session() as session:
+                    result = session.run("""
+                        MATCH (s:yzbx_Student)
+                        OPTIONAL MATCH (s)-[r:PERFORMED]->(a:yzbx_Activity)
+                        WITH s, count(r) as activity_count
+                        RETURN s.student_id as student_id,
+                               s.name as name,
+                               activity_count
+                        ORDER BY s.student_id
+                    """)
+                    students = [dict(record) for record in result]
+                
+                if students:
+                    df = pd.DataFrame(students)
+                    df.columns = ['学号', '姓名', '学习记录数']
+                    st.dataframe(df, use_container_width=True)
+                    st.info(f"📊 共 {len(students)} 名学生")
+                else:
+                    st.warning("暂无学生数据")
+            except Exception as e:
+                st.error(f"获取学生列表失败: {e}")
+        
+        with col2:
+            st.markdown("#### 🗑️ 删除学生")
+            st.warning("⚠️ 删除操作不可恢复，请谨慎操作！")
+            
+            student_id_to_delete = st.text_input("输入要删除的学号", key="delete_student_id")
+            
+            if st.button("🗑️ 删除该学生", key="delete_student_btn", type="primary"):
+                if student_id_to_delete:
+                    if st.session_state.get('confirm_delete') != student_id_to_delete:
+                        st.session_state.confirm_delete = student_id_to_delete
+                        st.warning(f"⚠️ 确认删除学号为 {student_id_to_delete} 的学生？再次点击确认删除。")
+                    else:
+                        try:
+                            driver = get_neo4j_driver()
+                            with driver.session() as session:
+                                # 先删除关联的活动记录
+                                session.run("""
+                                    MATCH (s:yzbx_Student {student_id: $student_id})-[r:PERFORMED]->(a:yzbx_Activity)
+                                    DELETE r, a
+                                """, student_id=student_id_to_delete)
+                                
+                                # 再删除学生节点
+                                result = session.run("""
+                                    MATCH (s:yzbx_Student {student_id: $student_id})
+                                    DELETE s
+                                    RETURN count(s) as deleted_count
+                                """, student_id=student_id_to_delete)
+                                
+                                deleted = result.single()['deleted_count']
+                                
+                            if deleted > 0:
+                                st.success(f"✅ 已删除学号 {student_id_to_delete} 及其所有学习记录")
+                                st.session_state.confirm_delete = None
+                                st.rerun()
+                            else:
+                                st.error(f"未找到学号为 {student_id_to_delete} 的学生")
+                        except Exception as e:
+                            st.error(f"删除失败: {e}")
+                else:
+                    st.warning("请输入学号")
+    
+    # ===== 活动记录管理 =====
+    with tab3:
+        st.markdown("### 📝 活动记录管理")
+        
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            st.markdown("#### 📊 最近活动记录")
+            try:
+                driver = get_neo4j_driver()
+                with driver.session() as session:
+                    result = session.run("""
+                        MATCH (s:yzbx_Student)-[r:PERFORMED]->(a:yzbx_Activity)
+                        RETURN s.student_id as 学号,
+                               a.module_name as 模块,
+                               a.activity_type as 类型,
+                               toString(a.timestamp) as 时间
+                        ORDER BY a.timestamp DESC
+                        LIMIT 100
+                    """)
+                    activities = [dict(record) for record in result]
+                
+                if activities:
+                    df = pd.DataFrame(activities)
+                    st.dataframe(df, use_container_width=True)
+                    st.info(f"显示最近100条记录")
+                else:
+                    st.warning("暂无活动记录")
+            except Exception as e:
+                st.error(f"获取活动记录失败: {e}")
+        
+        with col2:
+            st.markdown("#### 🗑️ 清除数据")
+            st.error("⚠️ 危险操作区域")
+            
+            if st.button("🗑️ 清除所有学习记录", key="clear_all_activities", type="primary"):
+                if st.session_state.get('confirm_clear_activities') != True:
+                    st.session_state.confirm_clear_activities = True
+                    st.warning("⚠️ 将删除所有学习记录（不删除学生）！再次点击确认。")
+                else:
+                    try:
+                        driver = get_neo4j_driver()
+                        with driver.session() as session:
+                            result = session.run("""
+                                MATCH (a:yzbx_Activity)
+                                DETACH DELETE a
+                                RETURN count(a) as deleted_count
+                            """)
+                            deleted = result.single()['deleted_count']
+                        
+                        st.success(f"✅ 已清除 {deleted} 条学习记录")
+                        st.session_state.confirm_clear_activities = False
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"清除失败: {e}")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            if st.button("🗑️ 清除所有数据", key="clear_all_data", type="primary"):
+                if st.session_state.get('confirm_clear_all') != True:
+                    st.session_state.confirm_clear_all = True
+                    st.error("⚠️ 将删除所有学生和学习记录！再次点击确认。")
+                else:
+                    try:
+                        driver = get_neo4j_driver()
+                        with driver.session() as session:
+                            result = session.run("""
+                                MATCH (n)
+                                WHERE n:yzbx_Student OR n:yzbx_Activity
+                                DETACH DELETE n
+                                RETURN count(n) as deleted_count
+                            """)
+                            deleted = result.single()['deleted_count']
+                        
+                        st.success(f"✅ 已清除 {deleted} 个节点")
+                        st.session_state.confirm_clear_all = False
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"清除失败: {e}")
 
 def render_system_settings():
     """渲染系统设置页面（仅教师可用）"""
