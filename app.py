@@ -1018,6 +1018,28 @@ def render_module_analytics(module_name):
     
     has_neo4j = check_neo4j_available()
     
+    # 调试信息面板
+    with st.expander("🔧 调试信息（点击展开）", expanded=False):
+        st.markdown("**连接状态检查：**")
+        st.write(f"- Neo4j可用: `{has_neo4j}`")
+        
+        if has_neo4j:
+            try:
+                from modules.analytics import get_activity_summary
+                summary = get_activity_summary()
+                st.write(f"- 学生总数: `{summary.get('total_students', 0)}`")
+                st.write(f"- 活动总数: `{summary.get('total_activities', 0)}`")
+                
+                all_students_debug = get_all_students()
+                st.write(f"- get_all_students返回: `{len(all_students_debug)}` 条记录")
+                
+                stats = get_single_module_statistics(module_name)
+                st.write(f"- {module_name}统计: `{stats}`")
+            except Exception as e:
+                st.error(f"查询出错: {e}")
+        else:
+            st.warning("Neo4j不可用，无法获取数据")
+    
     st.markdown(f"""
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                 padding: 25px; border-radius: 16px; margin-bottom: 30px;">
@@ -1038,47 +1060,47 @@ def render_module_analytics(module_name):
         all_students = get_all_students() if has_neo4j else []
         if not all_students:
             st.info("💡 当前暂无学生数据。学生注册登录后，数据会自动显示在此处。")
-            return
-        
-        student_options = {f"{s['student_id']} - {s.get('name', '未设置姓名')}": s['student_id'] 
-                          for s in all_students}
-        
-        selected_display = st.selectbox("选择学生", list(student_options.keys()), key=f"select_{module_name}")
-        selected_student_id = student_options[selected_display]
-        
-        if selected_student_id:
-            # 获取该学生在该模块的活动记录
-            activities = get_student_activities(selected_student_id, module_name)
+            # 不要return，让tab2可以继续显示
+        else:
+            student_options = {f"{s['student_id']} - {s.get('name', '未设置姓名')}": s['student_id'] 
+                              for s in all_students}
             
-            st.markdown(f"#### {selected_display.split(' - ')[1]} 的{module_name}学习数据")
+            selected_display = st.selectbox("选择学生", list(student_options.keys()), key=f"select_{module_name}")
+            selected_student_id = student_options[selected_display]
             
-            # 统计数据
-            total_activities = len(activities)
-            unique_days = len(set(a['date'] for a in activities)) if activities else 0
+            if selected_student_id:
+                # 获取该学生在该模块的活动记录
+                activities = get_student_activities(selected_student_id, module_name)
             
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("学习记录数", str(total_activities))
-            with col2:
-                st.metric("活跃天数", str(unique_days))
-            with col3:
-                avg_per_day = round(total_activities / unique_days, 1) if unique_days > 0 else 0
-                st.metric("日均记录数", str(avg_per_day))
-            
-            # 学习记录列表
-            if activities:
-                st.markdown("##### 📋 最近学习记录 (最新10条)")
-                records = []
-                for act in activities[:10]:
-                    records.append({
-                        "时间": act['timestamp'],
-                        "活动类型": act['activity_type'],
-                        "内容": act.get('content_name', '-'),
-                        "详情": act.get('details', '-')
-                    })
-                st.dataframe(pd.DataFrame(records), use_container_width=True, hide_index=True)
-            else:
-                st.info(f"该学生暂无{module_name}学习记录")
+                st.markdown(f"#### {selected_display.split(' - ')[1]} 的{module_name}学习数据")
+                
+                # 统计数据
+                total_activities = len(activities)
+                unique_days = len(set(a['date'] for a in activities)) if activities else 0
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("学习记录数", str(total_activities))
+                with col2:
+                    st.metric("活跃天数", str(unique_days))
+                with col3:
+                    avg_per_day = round(total_activities / unique_days, 1) if unique_days > 0 else 0
+                    st.metric("日均记录数", str(avg_per_day))
+                
+                # 学习记录列表
+                if activities:
+                    st.markdown("##### 📋 最近学习记录 (最新10条)")
+                    records = []
+                    for act in activities[:10]:
+                        records.append({
+                            "时间": act['timestamp'],
+                            "活动类型": act['activity_type'],
+                            "内容": act.get('content_name', '-'),
+                            "详情": act.get('details', '-')
+                        })
+                    st.dataframe(pd.DataFrame(records), use_container_width=True, hide_index=True)
+                else:
+                    st.info(f"该学生暂无{module_name}学习记录")
     
     with tab2:
         st.markdown("### 📊 整体统计数据")
