@@ -228,7 +228,13 @@ def get_module_statistics():
 def get_single_module_statistics(module_name):
     """获取单个模块的详细统计"""
     if not check_neo4j_available():
-        return None
+        return {
+            'module': module_name,
+            'total_visits': 0,
+            'unique_students': 0,
+            'avg_visits_per_student': 0,
+            'recent_7d_visits': 0
+        }
     
     try:
         driver = get_neo4j_driver()
@@ -245,24 +251,35 @@ def get_single_module_statistics(module_name):
             total_activities = record['total_activities'] if record else 0
             unique_students = record['unique_students'] if record else 0
             
-            # 今日访问
+            # 计算人均访问次数
+            avg_visits = round(total_activities / unique_students, 1) if unique_students > 0 else 0
+            
+            # 近7天访问
             result = session.run("""
                 MATCH (a:yzbx_Activity {module: $module})
-                WHERE date(a.timestamp) = date()
-                RETURN count(a) as today_count
+                WHERE a.timestamp > datetime() - duration('P7D')
+                RETURN count(a) as recent_count
             """, module=module_name)
             
             record = result.single()
-            today_count = record['today_count'] if record else 0
+            recent_count = record['recent_count'] if record else 0
         
         return {
             'module': module_name,
-            'total_activities': total_activities,
+            'total_visits': total_activities,
             'unique_students': unique_students,
-            'today_count': today_count
+            'avg_visits_per_student': avg_visits,
+            'recent_7d_visits': recent_count
         }
-    except:
-        return None
+    except Exception as e:
+        print(f"获取模块统计失败 {module_name}: {e}")
+        return {
+            'module': module_name,
+            'total_visits': 0,
+            'unique_students': 0,
+            'avg_visits_per_student': 0,
+            'recent_7d_visits': 0
+        }
 
 def delete_student_data(student_id):
     """删除学生及其所有活动数据"""
