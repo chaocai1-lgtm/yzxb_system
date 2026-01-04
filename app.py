@@ -3,6 +3,7 @@
 """
 
 import streamlit as st
+import random
 from modules.case_library import render_case_library
 from modules.knowledge_graph import render_knowledge_graph
 from modules.ability_recommender import render_ability_recommender
