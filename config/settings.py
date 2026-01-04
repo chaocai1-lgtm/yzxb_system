@@ -1,34 +1,67 @@
 """
 配置文件
 存储数据库连接信息和API密钥
+支持本地开发和Streamlit Cloud部署
 """
 
 import os
-from dotenv import load_dotenv
 
-# 加载环境变量
-load_dotenv()
+# 尝试导入streamlit获取secrets（部署环境）
+try:
+    import streamlit as st
+    HAS_STREAMLIT = True
+except ImportError:
+    HAS_STREAMLIT = False
 
-# Neo4j配置
-NEO4J_URI = os.getenv("NEO4J_URI", "neo4j+s://7eb127cc.databases.neo4j.io")
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME", "neo4j")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "wE7pV36hqNSo43mpbjTlfzE7n99NWcYABDFqUGvgSrk")
+def get_secret(key, default=None):
+    """
+    获取配置值，优先级：
+    1. Streamlit secrets (部署环境)
+    2. 环境变量
+    3. 默认值
+    """
+    # 首先尝试从Streamlit secrets获取
+    if HAS_STREAMLIT:
+        try:
+            if hasattr(st, 'secrets') and key in st.secrets:
+                return st.secrets[key]
+        except Exception:
+            pass
+    
+    # 然后尝试环境变量
+    env_value = os.getenv(key)
+    if env_value:
+        return env_value
+    
+    # 最后使用默认值
+    return default
+
+# Neo4j配置 - 使用neo4j+ssc跳过SSL证书验证
+NEO4J_URI = get_secret("NEO4J_URI", "neo4j+ssc://7eb127cc.databases.neo4j.io")
+NEO4J_USERNAME = get_secret("NEO4J_USERNAME", "neo4j")
+NEO4J_PASSWORD = get_secret("NEO4J_PASSWORD", "wE7pV36hqNSo43mpbjTlfzE7n99NWcYABDFqUGvgSrk")
 
 # Elasticsearch配置
-ELASTICSEARCH_CLOUD_ID = os.getenv(
+ELASTICSEARCH_CLOUD_ID = get_secret(
     "ELASTICSEARCH_CLOUD_ID",
     "41ed8f6c58a942fb9aea8f6804841099:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyQ1ZTRhNGI5ZGNlZjc0NDI4YjI3MWEzZDg3YzRmZjY2OCRlZjhhODRlYjliNzc0YjM3ODk0NWQ3ZTQ3OWVkOWRkNQ=="
 )
-ELASTICSEARCH_USERNAME = os.getenv("ELASTICSEARCH_USERNAME", "elastic")
-ELASTICSEARCH_PASSWORD = os.getenv("ELASTICSEARCH_PASSWORD", "x5ZwEPmZewPZlnZIn1Fy3XoQ")
+ELASTICSEARCH_USERNAME = get_secret("ELASTICSEARCH_USERNAME", "elastic")
+ELASTICSEARCH_PASSWORD = get_secret("ELASTICSEARCH_PASSWORD", "x5ZwEPmZewPZlnZIn1Fy3XoQ")
 
 # DeepSeek API配置
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "sk-bdf96d7f1aa74a53a83ff167f7f2f5a9")
+DEEPSEEK_API_KEY = get_secret("DEEPSEEK_API_KEY", "sk-bdf96d7f1aa74a53a83ff167f7f2f5a9")
 DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
 
 # 应用配置
 APP_TITLE = "牙周病学自适应学习系统"
 APP_ICON = "🦷"
 
-# Neo4j标签
-NEO4J_LABEL_PREFIX = "yzbx"  # 牙周病学拼音首字母
+# Neo4j标签 - 实际数据库中的标签（无前缀）
+# 注意：数据库中使用的是 Module, Chapter, KnowledgePoint 等标签
+NEO4J_LABEL_MODULE = "Module"
+NEO4J_LABEL_CHAPTER = "Section"  # 数据库中的Section对应章节
+NEO4J_LABEL_KNOWLEDGE = "KnowledgePoint"
+NEO4J_LABEL_STUDENT = "Student"
+NEO4J_LABEL_ACTIVITY = "SearchLog"  # 学习活动日志
+NEO4J_LABEL_DANMU = "Log_Danmu_xinli"  # 弹幕日志

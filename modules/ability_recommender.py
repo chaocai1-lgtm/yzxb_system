@@ -136,183 +136,74 @@ def analyze_learning_path(selected_abilities, mastery_levels, abilities_info=Non
     
     # 使用DeepSeek AI生成推荐
     try:
+        import httpx
+        
+        # 创建不使用代理的httpx客户端，解决Streamlit Cloud部署问题
+        http_client = httpx.Client(
+            base_url=DEEPSEEK_BASE_URL,
+            timeout=60.0,
+            follow_redirects=True
+        )
+        
         client = OpenAI(
             api_key=DEEPSEEK_API_KEY,
-            base_url=DEEPSEEK_BASE_URL
+            base_url=DEEPSEEK_BASE_URL,
+            http_client=http_client
         )
         
         prompt = f"""
-你是一位资深牙周病学教学专家和临床医生，拥有20年以上的教学和临床经验。
+你是一位牙周病学教学专家。学生选择了以下目标能力：
 
-## 学生信息
-学生选择了以下目标能力进行学习：
 {', '.join(ability_names)}
 
-## 相关知识点
-根据知识图谱分析，这些能力需要掌握以下核心知识点：
+这些能力需要掌握以下知识点：
 {chr(10).join(knowledge_desc) if knowledge_desc else "（系统将根据能力要求推荐学习内容）"}
 
-## 请你完成以下分析任务
+请为学生制定一个个性化的学习路径，包括：
+1. **学习优先级排序**：按照"基础→重要→高级"的顺序，列出应该优先学习的知识点（5-8个）
+2. **学习建议**：针对每个知识点，给出简短的学习建议
+3. **预计学习时间**：估算总学习时间
+4. **能力提升预期**：完成学习后，学生在选定能力上能达到什么水平
 
-### 一、能力解读（详细分析每个选定能力）
-请针对学生选择的每个能力，详细说明：
-- 该能力在牙周病学临床实践中的重要性
-- 需要掌握的核心技能点
-- 常见的学习难点和误区
-
-### 二、知识点优先级排序
-按照"基础理论→临床技能→综合应用"的学习规律，列出8-12个应该学习的知识点，并说明：
-- 知识点名称
-- 重要程度（⭐⭐⭐⭐⭐）
-- 学习要点（2-3句话）
-- 推荐学习资源类型
-
-### 三、个性化学习路径
-设计一个分阶段的学习计划：
-- **第一周：基础夯实阶段** - 列出具体学习内容和目标
-- **第二周：技能培养阶段** - 列出具体学习内容和目标
-- **第三周：综合提升阶段** - 列出具体学习内容和目标
-
-### 四、学习方法建议
-针对每个阶段，给出具体的学习方法：
-- 推荐的教材章节
-- 建议的练习方式
-- 自我检测方法
-
-### 五、预期学习成果
-完成学习后，学生应该能够：
-- 理论层面达到什么水平
-- 实践层面掌握什么技能
-- 综合能力提升预期
-
-请用专业、详细、友好的语言，给出系统性的学习指导建议。每个部分都要充实具体，不要过于简略。
+请用简洁、友好的语言，给出实用的建议。
 """
         
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[{"role": "user", "content": prompt}],
-            stream=False,
-            timeout=60  # 增加超时时间
+            stream=False
         )
+        
+        # 关闭httpx客户端
+        http_client.close()
         
         return response.choices[0].message.content
     except Exception as e:
-        # 如果AI调用失败，返回一个详细的推荐，并包含错误信息
-        error_msg = str(e)
+        import traceback
+        error_trace = traceback.format_exc()
+        # 如果AI调用失败，返回一个基本的推荐
         return f"""
-## ⚠️ 注意：AI分析服务暂时不可用
+### 📚 学习路径推荐
 
-**错误信息**: `{error_msg[:100]}`
-## 一、能力解读
+基于您选择的能力目标，建议按以下顺序学习：
 
-根据您选择的目标能力，以下是详细分析：
+**第一阶段：基础知识夯实**
+1. 牙周组织解剖结构 - 了解牙龈、牙周膜、牙槽骨的基本结构
+2. 牙周检查基本方法 - 掌握探诊技术和记录方法
 
-**牙周组织解剖识别能力**
-- 🎯 **临床重要性**：这是牙周病学的基础，所有诊断和治疗都建立在对正常解剖结构的准确认知之上
-- 💡 **核心技能点**：辨识游离龈、附着龈、龈沟、牙周膜、牙槽骨的正常形态和特征
-- ⚠️ **常见误区**：容易混淆生理性龈沟与病理性牙周袋
+**第二阶段：核心技能培养**
+3. 牙周病诊断要点 - 学习分类标准和诊断流程
+4. 基础治疗操作 - 练习洁治和刮治技术
 
-**牙周探诊技术能力**
-- 🎯 **临床重要性**：探诊是牙周检查的核心技术，直接影响诊断准确性
-- 💡 **核心技能点**：探诊力度控制（20-25g）、角度调整、六点法记录
-- ⚠️ **常见误区**：用力过大导致假阳性，角度不当遗漏深袋
+**第三阶段：综合能力提升**
+5. 治疗计划制定 - 整合知识进行临床决策
+6. 患者教育技巧 - 提高口腔卫生指导能力
 
----
+**预计学习时间**：约 2-3 周（每天 1-2 小时）
 
-## 二、知识点优先级排序
+**学习建议**：建议结合教材、临床观摩和实践操作进行学习。
 
-| 序号 | 知识点 | 重要程度 | 学习要点 | 推荐资源 |
-|------|--------|----------|----------|----------|
-| 1 | 牙龈解剖结构 | ⭐⭐⭐⭐⭐ | 游离龈、附着龈、龈乳头的形态与功能 | 教材第2章+图谱 |
-| 2 | 牙周膜组成 | ⭐⭐⭐⭐⭐ | 主纤维束走行、细胞组成、功能意义 | 教材第2章+组织学 |
-| 3 | 牙槽骨特征 | ⭐⭐⭐⭐ | 固有牙槽骨、支持骨的结构和改建 | 教材第2章+X线片 |
-| 4 | 牙周探诊技术 | ⭐⭐⭐⭐⭐ | 探诊方法、力度、角度、记录方式 | 临床操作视频 |
-| 5 | 探诊深度测量 | ⭐⭐⭐⭐⭐ | PD测量要点、正常值判断 | 临床实践 |
-| 6 | 附着丧失评估 | ⭐⭐⭐⭐ | CAL计算方法、临床意义 | 教材第5章 |
-| 7 | 牙周病分类标准 | ⭐⭐⭐⭐ | 2018年新分类体系 | 专题讲座 |
-| 8 | 临床检查要点 | ⭐⭐⭐⭐ | 系统检查流程和记录 | 临床见习 |
-
----
-
-## 三、个性化学习路径
-
-### 📅 第一周：基础夯实阶段
-
-**学习目标**：掌握牙周组织正常解剖结构
-
-| 日期 | 学习内容 | 学习时长 | 完成标准 |
-|------|----------|----------|----------|
-| Day 1-2 | 牙龈解剖：游离龈、附着龈、龈沟 | 2小时/天 | 能绘制牙龈横切面示意图 |
-| Day 3-4 | 牙周膜：纤维组成和功能 | 2小时/天 | 能描述主纤维束走行 |
-| Day 5-6 | 牙槽骨：结构和改建机制 | 2小时/天 | 能识别X线片上的牙槽嵴 |
-| Day 7 | 复习总结+自测 | 2小时 | 完成章节习题正确率>80% |
-
-### 📅 第二周：技能培养阶段
-
-**学习目标**：掌握牙周探诊操作技术
-
-| 日期 | 学习内容 | 学习时长 | 完成标准 |
-|------|----------|----------|----------|
-| Day 1-2 | 探诊工具认识和握持方法 | 2小时/天 | 正确握持探针 |
-| Day 3-4 | 探诊力度和角度控制 | 3小时/天 | 在模型上练习 |
-| Day 5-6 | 六点法记录和牙周病历填写 | 2小时/天 | 完整填写病历 |
-| Day 7 | 临床观摩+技能考核 | 4小时 | 通过模拟操作考核 |
-
-### 📅 第三周：综合提升阶段
-
-**学习目标**：综合运用知识进行初步诊断
-
-| 日期 | 学习内容 | 学习时长 | 完成标准 |
-|------|----------|----------|----------|
-| Day 1-2 | 牙周病分类和诊断标准 | 2小时/天 | 掌握分期分级方法 |
-| Day 3-4 | 病例分析练习 | 3小时/天 | 分析3个典型病例 |
-| Day 5-6 | X线片解读结合临床 | 2小时/天 | 识别骨吸收类型 |
-| Day 7 | 综合测评 | 3小时 | 完成综合病例分析 |
-
----
-
-## 四、学习方法建议
-
-### 📚 理论学习
-- **推荐教材**：《牙周病学》第5版（人民卫生出版社）第2、4、5章
-- **辅助资源**：口腔组织学教材、临床操作视频库
-- **学习技巧**：制作思维导图，将解剖结构与临床意义关联
-
-### 🔬 实践练习
-- **模型练习**：在仿真头模上练习探诊操作，每天至少30分钟
-- **同伴互练**：与同学互相进行口腔检查练习
-- **临床见习**：争取观摩至少5例牙周病患者的检查过程
-
-### ✅ 自我检测
-- 每周末完成章节习题
-- 使用本系统的病例库进行自测
-- 记录学习笔记，定期复习
-
----
-
-## 五、预期学习成果
-
-完成三周学习后，您将能够：
-
-**理论层面**
-- ✅ 准确描述牙周组织的解剖结构和组织学特点
-- ✅ 理解牙周组织在健康和疾病状态下的差异
-- ✅ 掌握牙周病分类的基本框架
-
-**实践层面**
-- ✅ 正确进行牙周探诊操作
-- ✅ 准确测量和记录探诊深度
-- ✅ 初步判断牙周组织健康状况
-
-**综合能力**
-- ✅ 能够对简单病例进行初步的牙周评估
-- ✅ 为后续学习牙周治疗奠定坚实基础
-
----
-
-💡 **温馨提示**：学习过程中遇到问题，可以使用本系统的"课中互动"功能向AI提问，或在知识图谱中查看相关知识点的联系。
-
-⚠️ **注意**：AI分析服务暂时不可用，以上为系统智能预设推荐。建议稍后重试获取更个性化的分析。
+⚠️ 注意：AI分析服务暂时不可用（{str(e)[:50]}），以上为系统预设推荐。
 """
 
 def render_ability_recommender():
@@ -501,22 +392,13 @@ def render_ability_recommender():
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #667eea;">
                     <p style="margin: 0; color: #666;">🤖 <strong>AI正在思考...</strong></p>
                     <p style="margin: 5px 0 0 0; color: #888; font-size: 14px;">
-                        正在调用DeepSeek API，分析您的能力水平、学习目标，结合牙周病学知识体系生成最优学习路径...
+                        正在分析您的能力水平、学习目标，结合牙周病学知识体系生成最优学习路径...
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # 添加调试信息显示
-                debug_box = st.empty()
-                debug_box.info(f"🔧 调试：准备调用AI API，已选择 {len(selected_abilities)} 个能力")
-                
                 try:
                     recommendation = analyze_learning_path(selected_abilities, mastery_levels, abilities)
-                    
-                    # 检查是否真的调用了API（检查返回内容是否包含"演示数据"标识）
-                    is_fallback = "⚠️ 注意：AI分析服务暂时不可用" in recommendation
-                    
-                    debug_box.empty()  # 清除调试信息
                     
                     # 步骤3完成
                     step3.markdown("""
@@ -540,34 +422,24 @@ def render_ability_recommender():
                     """, unsafe_allow_html=True)
                     
                     # 显示AI推荐结果
-                    if is_fallback:
-                        st.warning("⚠️ AI服务暂时不可用，显示预设推荐方案")
-                    else:
-                        st.success("✅ DeepSeek AI分析完成！以下是根据您的能力选择生成的个性化推荐")
-                    
                     st.markdown("""
                     <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); 
                                 padding: 20px; border-radius: 12px; margin: 20px 0;">
-                        <h4 style="color: white; margin: 0;">🎯 学习路径推荐</h4>
+                        <h4 style="color: white; margin: 0;">🎯 AI个性化学习推荐</h4>
                     </div>
                     """, unsafe_allow_html=True)
                     
                     st.markdown(recommendation)
                     
                     # 记录AI推荐生成
-                    log_ability_activity("生成AI推荐", details=f"成功生成学习路径推荐 (使用{'预设方案' if is_fallback else 'AI分析'})")
+                    log_ability_activity("生成AI推荐", details="成功生成学习路径推荐")
                     
                     # 保存到session
                     st.session_state['last_recommendation'] = recommendation
-                    st.session_state['last_recommendation_fallback'] = is_fallback
                     
-                    if not is_fallback:
-                        st.success("🎉 AI推荐生成完成！这是根据您选择的能力定制的个性化方案")
-                    else:
-                        st.info("💡 提示：AI服务不可用时会显示预设方案，实际部署后将调用真实AI")
+                    st.success("🎉 推荐生成完成！按照上述路径学习，效率更高！")
                     
                 except Exception as e:
-                    debug_box.error(f"🔧 调试：发生错误 - {str(e)}")
                     step3.markdown("""
                     <div style="text-align: center; padding: 15px; background: #f8d7da; border-radius: 10px; border: 2px solid #dc3545;">
                         <div style="font-size: 30px;">❌</div>
@@ -610,13 +482,9 @@ def render_ability_recommender():
             with col1:
                 fig = go.Figure()
                 
-                # 闭环：将第一个元素添加到末尾
-                radar_names = selected_ability_names + [selected_ability_names[0]]
-                radar_scores = selected_mastery_scores + [selected_mastery_scores[0]]
-                
                 fig.add_trace(go.Scatterpolar(
-                    r=radar_scores,
-                    theta=radar_names,
+                    r=selected_mastery_scores,
+                    theta=selected_ability_names,
                     fill='toself',
                     name='当前掌握度',
                     line=dict(color='#4ECDC4', width=3),

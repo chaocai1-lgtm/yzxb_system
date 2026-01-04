@@ -26,3 +26,5 @@ temp_*
 # OS
 .DS_Store
 Thumbs.db
+
+.streamlit/secrets.toml

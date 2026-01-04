@@ -12,13 +12,13 @@ from config.settings import *
 TEACHER_PASSWORD = "admin888"
 
 def get_neo4j_driver():
-    """获取Neo4j连接（禁用SSL证书验证）"""
+    """获取Neo4j连接"""
+    # neo4j+ssc协议已包含SSL设置，不需要额外参数
     return GraphDatabase.driver(
         NEO4J_URI, 
         auth=(NEO4J_USERNAME, NEO4J_PASSWORD),
-        trusted_certificates=False,
         max_connection_lifetime=30,
-        connection_timeout=5
+        connection_timeout=10
     )
 
 # 全局变量：标记Neo4j是否可用
