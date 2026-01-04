@@ -718,7 +718,8 @@ def render_teacher_dashboard():
     """渲染教师端数据概览首页"""
     import pandas as pd
     import plotly.express as px
-    import random
+    from modules.analytics import get_activity_summary, get_daily_activity_trend
+    from modules.auth import check_neo4j_available, get_all_students
     
     st.markdown("""
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -727,92 +728,160 @@ def render_teacher_dashboard():
         <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9);">
             实时查看学生学习情况，掌握教学效果
         </p>
-        <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.7); font-size: 13px;">
-            ⚠️ 注意：以下为系统演示数据，非真实学生数据
-        </p>
     </div>
     """, unsafe_allow_html=True)
     
-    # 核心数据指标
+    # 获取真实数据
+    has_neo4j = check_neo4j_available()
+    if has_neo4j:
+        summary = get_activity_summary()
+        all_students = get_all_students()
+        
+        # 计算增长（简单示例，可以改进为与昨天/上周对比）
+        total_students = summary['total_students']
+        today_active = summary['today_activities']
+        active_7d = summary['active_students']
+    else:
+        st.warning("⚠️ Neo4j数据库未连接，显示为空数据。请在本地部署时连接数据库查看真实数据。")
+        total_students = 0
+        today_active = 0
+        active_7d = 0
+    
+    # 核心数据指标 - 使用真实数据
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        st.metric("👥 学生总数", "156", "+12")
+        st.metric("👥 学生总数", str(total_students))
     with col2:
-        st.metric("📚 今日活跃", "89", "+15%")
+        st.metric("📚 今日活跃", str(today_active))
     with col3:
-        st.metric("⏱️ 平均学习时长", "45分钟", "+8%")
+        st.metric("👨‍🎓 7日活跃学生", str(active_7d))
     with col4:
-        st.metric("✅ 平均完成率", "78%", "+5%")
+        if has_neo4j:
+            completion_rate = int((active_7d / total_students * 100)) if total_students > 0 else 0
+            st.metric("✅ 7日活跃率", f"{completion_rate}%")
+        else:
+            st.metric("✅ 7日活跃率", "0%")
     with col5:
-        st.metric("🎯 平均正确率", "85%", "+3%")
+        total_acts = summary['total_activities'] if has_neo4j else 0
+        st.metric("📝 总学习记录", str(total_acts))
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 四个模块数据概览
+    # 四个模块数据概览 - 调用真实数据
     st.markdown("### 📈 各模块学习数据")
     
     modules = ["病例库", "知识图谱", "能力推荐", "课中互动"]
     module_cols = st.columns(4)
     
+    if has_neo4j:
+        from modules.auth import get_single_module_statistics
+        
     for i, module in enumerate(modules):
         with module_cols[i]:
+            if has_neo4j:
+                stats = get_single_module_statistics(module)
+                visit_count = stats.get('total_visits', 0)
+                student_count = stats.get('unique_students', 0)
+                completion = int((student_count / total_students * 100)) if total_students > 0 else 0
+            else:
+                visit_count = 0
+                completion = 0
+                
             st.markdown(f"""
             <div style="background: #fff; border-radius: 12px; padding: 20px; 
                         border: 1px solid rgba(102,126,234,0.2); text-align: center;">
                 <h4 style="color: #667eea; margin-bottom: 15px;">{module}</h4>
-                <div style="font-size: 24px; font-weight: 600; color: #333;">{random.randint(60, 120)}</div>
+                <div style="font-size: 24px; font-weight: 600; color: #333;">{visit_count}</div>
                 <div style="color: #888; font-size: 13px;">学习人次</div>
                 <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
                 <div style="display: flex; justify-content: space-between; font-size: 13px;">
-                    <span>完成率</span>
-                    <span style="color: #667eea; font-weight: 600;">{random.randint(65, 95)}%</span>
+                    <span>学生参与率</span>
+                    <span style="color: #667eea; font-weight: 600;">{completion}%</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 图表区域
+    # 图表区域 - 使用真实数据
     chart_col1, chart_col2 = st.columns(2)
     
     with chart_col1:
         st.markdown("### 📊 近7天学习趋势")
-        dates = [f"01-0{i}" for i in range(1, 8)]
-        df = pd.DataFrame({
-            "日期": dates,
-            "学习人数": [random.randint(50, 100) for _ in range(7)],
-            "完成人数": [random.randint(30, 70) for _ in range(7)]
-        })
-        fig = px.line(df, x="日期", y=["学习人数", "完成人数"], markers=True)
-        fig.update_layout(height=300, margin=dict(l=20, r=20, t=30, b=20), legend=dict(orientation="h"))
-        st.plotly_chart(fig, use_container_width=True)
+        if has_neo4j:
+            trend_data = get_daily_activity_trend(7)
+            if trend_data:
+                df = pd.DataFrame(trend_data)
+                fig = px.line(df, x="date", y="count", markers=True, 
+                            labels={"date": "日期", "count": "活动数"})
+                fig.update_layout(height=300, margin=dict(l=20, r=20, t=30, b=20))
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("暂无近7天数据")
+        else:
+            st.info("需要连接数据库查看趋势")
     
     with chart_col2:
-        st.markdown("### 🥧 学习进度分布")
-        progress_df = pd.DataFrame({
-            "状态": ["未开始", "进行中", "已完成"],
-            "人数": [25, 56, 75]
-        })
-        fig = px.pie(progress_df, values="人数", names="状态", 
-                    color_discrete_sequence=['#e8eaf6', '#667eea', '#764ba2'])
-        fig.update_layout(height=300, margin=dict(l=20, r=20, t=30, b=20))
-        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("### 🥧 学生学习模块分布")
+        if has_neo4j:
+            # 统计每个模块的访问学生数
+            module_data = []
+            for module in modules:
+                stats = get_single_module_statistics(module)
+                module_data.append({
+                    "模块": module,
+                    "学生数": stats.get('unique_students', 0)
+                })
+            
+            if any(m['学生数'] > 0 for m in module_data):
+                progress_df = pd.DataFrame(module_data)
+                fig = px.pie(progress_df, values="学生数", names="模块", 
+                            color_discrete_sequence=['#667eea', '#764ba2', '#f093fb', '#4facfe'])
+                fig.update_layout(height=300, margin=dict(l=20, r=20, t=30, b=20))
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("暂无模块访问数据")
+        else:
+            st.info("需要连接数据库查看分布")
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 学生排行榜
+    # 学生排行榜 - 使用真实数据
     st.markdown("### 🏆 学习排行榜 (Top 10)")
-    leaderboard = []
-    names = ["张三", "李四", "王五", "赵六", "钱七", "孙八", "周九", "吴十", "郑九", "王十"]
-    for i, name in enumerate(names):
-        leaderboard.append({
-            "排名": "🥇" if i == 0 else ("🥈" if i == 1 else ("🥉" if i == 2 else str(i+1))),
-            "学生": name,
-            "学习时长(分)": 300 - i * 20,
-            "完成任务": 15 - i,
-            "正确率": f"{95 - i * 3}%"
-        })
-    st.dataframe(pd.DataFrame(leaderboard), use_container_width=True, hide_index=True)
+    
+    if has_neo4j:
+        # 从数据库获取学生活动统计
+        try:
+            driver = get_neo4j_driver()
+            with driver.session() as session:
+                result = session.run("""
+                    MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
+                    RETURN s.student_id as student_id, 
+                           s.name as name,
+                           count(a) as activity_count,
+                           count(DISTINCT date(a.timestamp)) as active_days
+                    ORDER BY activity_count DESC
+                    LIMIT 10
+                """)
+                
+                leaderboard = []
+                for i, record in enumerate(result):
+                    leaderboard.append({
+                        "排名": "🥇" if i == 0 else ("🥈" if i == 1 else ("🥉" if i == 2 else str(i+1))),
+                        "学号": record['student_id'],
+                        "姓名": record['name'] if record['name'] else "未设置",
+                        "学习记录数": record['activity_count'],
+                        "活跃天数": record['active_days']
+                    })
+                
+                if leaderboard:
+                    st.dataframe(pd.DataFrame(leaderboard), use_container_width=True, hide_index=True)
+                else:
+                    st.info("暂无学生学习数据")
+        except Exception as e:
+            st.error(f"获取排行榜数据失败: {e}")
+    else:
+        st.info("需要连接数据库查看学生排行榜")
 
 def render_home_page(user):
     """渲染首页"""
@@ -937,7 +1006,10 @@ def render_home_page(user):
 
 def render_module_analytics(module_name):
     """渲染教师端模块数据分析页面"""
-    import random
+    from modules.auth import check_neo4j_available, get_all_students, get_student_activities, get_single_module_statistics, get_neo4j_driver
+    import pandas as pd
+    
+    has_neo4j = check_neo4j_available()
     
     st.markdown(f"""
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -946,82 +1018,134 @@ def render_module_analytics(module_name):
         <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9);">
             查看学生在该模块的学习情况和整体数据统计
         </p>
-        <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.7); font-size: 13px;">
-            ⚠️ 注意：以下为系统演示数据
-        </p>
     </div>
     """, unsafe_allow_html=True)
     
+    if not has_neo4j:
+        st.warning("⚠️ Neo4j数据库未连接，无法显示真实数据。请在本地部署时连接数据库。")
+        return
+    
     # 选项卡：个人数据 / 整体数据
-    tab1, tab2 = st.tabs(["👤 学生个人数据 (演示)", "📈 整体统计数据 (演示)"])
+    tab1, tab2 = st.tabs(["👤 学生个人数据", "📈 整体统计数据"])
     
     with tab1:
         st.markdown("### 🔍 查询学生学习数据")
-        st.info("💡 提示：学生姓名为演示数据，实际应用需连接真实学生数据库")
         
-        # 模拟学生列表
-        students = ["演示学生A", "演示学生B", "演示学生C", "演示学生D", "演示学生E"]
-        selected_student = st.selectbox("选择学生", students, key=f"select_{module_name}")
+        # 获取真实学生列表
+        all_students = get_all_students()
+        if not all_students:
+            st.info("暂无注册学生")
+            return
         
-        if selected_student:
-            st.markdown(f"#### {selected_student} 的{module_name}学习数据")
+        student_options = {f"{s['student_id']} - {s.get('name', '未设置姓名')}": s['student_id'] 
+                          for s in all_students}
+        
+        selected_display = st.selectbox("选择学生", list(student_options.keys()), key=f"select_{module_name}")
+        selected_student_id = student_options[selected_display]
+        
+        if selected_student_id:
+            # 获取该学生在该模块的活动记录
+            activities = get_student_activities(selected_student_id, module_name)
             
-            col1, col2, col3, col4 = st.columns(4)
+            st.markdown(f"#### {selected_display.split(' - ')[1]} 的{module_name}学习数据")
+            
+            # 统计数据
+            total_activities = len(activities)
+            unique_days = len(set(a['date'] for a in activities)) if activities else 0
+            
+            col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("学习时长", f"{random.randint(30, 180)} 分钟", f"+{random.randint(5, 20)}%")
+                st.metric("学习记录数", str(total_activities))
             with col2:
-                st.metric("完成进度", f"{random.randint(40, 100)}%", f"+{random.randint(5, 15)}%")
+                st.metric("活跃天数", str(unique_days))
             with col3:
-                st.metric("正确率", f"{random.randint(60, 95)}%", f"+{random.randint(1, 10)}%")
-            with col4:
-                st.metric("活跃度", f"{random.randint(70, 100)}分", f"+{random.randint(2, 8)}")
+                avg_per_day = round(total_activities / unique_days, 1) if unique_days > 0 else 0
+                st.metric("日均记录数", str(avg_per_day))
             
-            # 学习记录
-            st.markdown("##### 📋 最近学习记录")
-            records = []
-            for i in range(5):
-                records.append({
-                    "日期": f"2026-01-0{5-i}",
-                    "学习内容": f"{module_name}内容{i+1}",
-                    "时长(分钟)": random.randint(15, 60),
-                    "完成状态": random.choice(["✅ 已完成", "🔄 进行中", "⏸️ 暂停"])
-                })
-            import pandas as pd
-            st.dataframe(pd.DataFrame(records), use_container_width=True, hide_index=True)
+            # 学习记录列表
+            if activities:
+                st.markdown("##### 📋 最近学习记录 (最新10条)")
+                records = []
+                for act in activities[:10]:
+                    records.append({
+                        "时间": act['timestamp'],
+                        "活动类型": act['activity_type'],
+                        "内容": act.get('content_name', '-'),
+                        "详情": act.get('details', '-')
+                    })
+                st.dataframe(pd.DataFrame(records), use_container_width=True, hide_index=True)
+            else:
+                st.info(f"该学生暂无{module_name}学习记录")
     
     with tab2:
         st.markdown("### 📊 整体统计数据")
         
+        # 获取模块统计数据
+        stats = get_single_module_statistics(module_name)
+        
         # 整体统计卡片
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.markdown("""
+            st.markdown(f"""
             <div class="stat-card">
-                <div class="stat-number">156</div>
-                <div class="stat-label">👥 总学习人数</div>
+                <div class="stat-number">{stats.get('unique_students', 0)}</div>
+                <div class="stat-label">👥 学习学生数</div>
             </div>
             """, unsafe_allow_html=True)
         with col2:
-            st.markdown("""
+            st.markdown(f"""
             <div class="stat-card">
-                <div class="stat-number">2,340</div>
-                <div class="stat-label">⏱️ 总学习时长(分)</div>
+                <div class="stat-number">{stats.get('total_visits', 0)}</div>
+                <div class="stat-label">📝 总访问次数</div>
             </div>
             """, unsafe_allow_html=True)
         with col3:
-            st.markdown("""
+            st.markdown(f"""
             <div class="stat-card">
-                <div class="stat-number">78%</div>
-                <div class="stat-label">✅ 平均完成率</div>
+                <div class="stat-number">{stats.get('avg_visits_per_student', 0)}</div>
+                <div class="stat-label">📊 人均访问次数</div>
             </div>
             """, unsafe_allow_html=True)
         with col4:
-            st.markdown("""
+            st.markdown(f"""
             <div class="stat-card">
-                <div class="stat-number">85%</div>
-                <div class="stat-label">🎯 平均正确率</div>
+                <div class="stat-number">{stats.get('recent_7d_visits', 0)}</div>
+                <div class="stat-label">🔥 近7日访问</div>
             </div>
             """, unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # 显示活跃学生排行
+        st.markdown(f"#### 🏆 {module_name}学习排行榜")
+        try:
+            driver = get_neo4j_driver()
+            with driver.session() as session:
+                result = session.run("""
+                    MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
+                    WHERE a.module_name = $module_name
+                    RETURN s.student_id as student_id, 
+                           s.name as name,
+                           count(a) as activity_count
+                    ORDER BY activity_count DESC
+                    LIMIT 10
+                """, module_name=module_name)
+                
+                ranking = []
+                for i, record in enumerate(result):
+                    ranking.append({
+                        "排名": "🥇" if i == 0 else ("🥈" if i == 1 else ("🥉" if i == 2 else str(i+1))),
+                        "学号": record['student_id'],
+                        "姓名": record['name'] if record['name'] else "未设置",
+                        "学习记录数": record['activity_count']
+                    })
+                
+                if ranking:
+                    st.dataframe(pd.DataFrame(ranking), use_container_width=True, hide_index=True)
+                else:
+                    st.info(f"暂无{module_name}学习数据")
+        except Exception as e:
+            st.error(f"获取排行数据失败: {e}")
         
         st.markdown("<br>", unsafe_allow_html=True)
         
