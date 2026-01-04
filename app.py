@@ -84,6 +84,66 @@ st.markdown("""
         transition: none !important;
     }
     
+    /* 完全禁用滚动条相关的动画和闪烁 */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+        transition: none !important;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+        transition: none !important;
+    }
+    
+    /* 禁用 DataFrame 的所有动画和过渡 */
+    [data-testid="stDataFrame"],
+    .stDataFrame,
+    div[data-testid="stDataFrame"] > div,
+    div[data-testid="stDataFrame"] * {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+        will-change: auto !important;
+    }
+    
+    /* 强制表格容器稳定渲染 */
+    [data-testid="stDataFrame"] > div > div {
+        backface-visibility: hidden !important;
+        -webkit-backface-visibility: hidden !important;
+        transform: translateZ(0) !important;
+        -webkit-transform: translateZ(0) !important;
+    }
+    
+    /* 禁用表格内部滚动时的重绘 */
+    .stDataFrame iframe,
+    [data-testid="stDataFrame"] iframe {
+        pointer-events: auto !important;
+        animation: none !important;
+        transition: none !important;
+    }
+    
+    /* 禁用 AG Grid 的动画（Streamlit dataframe 使用的库）*/
+    .ag-root-wrapper,
+    .ag-root,
+    .ag-body-viewport,
+    .ag-center-cols-viewport,
+    .ag-center-cols-container {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+    }
+    
     /* 隐藏Streamlit的状态指示器 */
     .stStatusWidget,
     div[data-testid="stStatusWidget"],
