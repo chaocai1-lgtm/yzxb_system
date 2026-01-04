@@ -1202,55 +1202,27 @@ def render_module_analytics(module_name):
         import plotly.express as px
         import pandas as pd
         
-        col_chart1, col_chart2 = st.columns(2)
+        # 近7天学习人数趋势
+        st.markdown("##### 📈 近7天学习人数趋势")
+        if has_neo4j:
+            try:
+                from modules.analytics import get_daily_activity_trend
+                trend_data = get_daily_activity_trend(7)
+                if trend_data:
+                    df = pd.DataFrame(trend_data)
+                    # 确保日期是字符串格式（已在函数中转换）
+                    fig = px.line(df, x="date", y="count", markers=True)
+                    fig.update_traces(line_color='#667eea')
+                    fig.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20), xaxis_title="日期", yaxis_title="活动数")
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info("暂无近7天数据")
+            except Exception as e:
+                st.error(f"加载趋势数据失败: {e}")
+        else:
+            st.info("需要连接数据库查看趋势")
         
-        with col_chart1:
-            st.markdown("##### 📈 近7天学习人数趋势")
-            if has_neo4j:
-                try:
-                    from modules.analytics import get_daily_activity_trend
-                    trend_data = get_daily_activity_trend(7)
-                    if trend_data:
-                        df = pd.DataFrame(trend_data)
-                        # 确保日期是字符串格式（已在函数中转换）
-                        fig = px.line(df, x="date", y="count", markers=True)
-                        fig.update_traces(line_color='#667eea')
-                        fig.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20), xaxis_title="日期", yaxis_title="活动数")
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        st.info("暂无近7天数据")
-                except Exception as e:
-                    st.error(f"加载趋势数据失败: {e}")
-            else:
-                st.info("需要连接数据库查看趋势")
-        
-        with col_chart2:
-            st.markdown("##### 🥧 学习模块分布")
-            if has_neo4j:
-                try:
-                    # 获取模块统计
-                    all_module_stats = get_all_modules_statistics()
-                    if all_module_stats:
-                        module_data = []
-                        for module_name, stats in all_module_stats.items():
-                            module_data.append({
-                                "模块": module_name,
-                                "访问次数": stats.get('total_visits', 0)
-                            })
-                        if module_data:
-                            df = pd.DataFrame(module_data)
-                            fig = px.pie(df, values="访问次数", names="模块",
-                                        color_discrete_sequence=['#667eea', '#764ba2', '#f093fb', '#4facfe'])
-                            fig.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20))
-                            st.plotly_chart(fig, use_container_width=True)
-                        else:
-                            st.info("暂无模块访问数据")
-                    else:
-                        st.info("暂无模块访问数据")
-                except Exception as e:
-                    st.error(f"加载模块数据失败: {e}")
-            else:
-                st.info("需要连接数据库查看分布")
+        st.markdown("<br>", unsafe_allow_html=True)
         
         # 学生排行榜
         st.markdown("##### 🏆 学习排行榜 (Top 10)")
