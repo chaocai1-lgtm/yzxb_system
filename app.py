@@ -1524,41 +1524,52 @@ def render_data_management():
         module_col1, module_col2, module_col3, module_col4 = st.columns(4)
         
         modules = ["病例库", "知识图谱", "能力推荐", "课中互动"]
+        selected_module = None
+        
         for i, module in enumerate(modules):
             with [module_col1, module_col2, module_col3, module_col4][i]:
-                if st.button(f"📥 {module}", key=f"export_{module}", use_container_width=True):
-                    with st.spinner(f"正在导出{module}数据..."):
-                        try:
-                            driver = get_neo4j_driver()
-                            with driver.session() as session:
-                                result = session.run("""
-                                    MATCH (s:yzbx_Student)-[r:PERFORMED]->(a:yzbx_Activity)
-                                    WHERE a.module_name = $module
-                                    RETURN s.student_id as 学号,
-                                           s.name as 姓名,
-                                           a.activity_type as 活动类型,
-                                           a.content_name as 内容名称,
-                                           toString(a.timestamp) as 学习时间,
-                                           a.details as 详情
-                                    ORDER BY a.timestamp DESC
-                                """, module=module)
-                                data = [dict(record) for record in result]
-                            
-                            if data:
-                                df = pd.DataFrame(data)
-                                csv = df.to_csv(index=False, encoding='utf-8-sig')
-                                st.download_button(
-                                    label=f"⬇️ 下载{module}数据",
-                                    data=csv,
-                                    file_name=f"{module}_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                                    mime="text/csv",
-                                    key=f"download_{module}"
-                                )
-                                st.success(f"✅ {module}记录: {len(data)}条")
-                            else:
-                                st.warning(f"{module}暂无数据")
-                        except Exception as e:
-                            st.error(f"导出失败: {e}")
+                if st.button(f"📥 {module}", key=f"export_btn_{module}", use_container_width=True):
+                    selected_module = module
+        
+        # 如果选择了模块，执行导出
+        if selected_module:
+            with st.spinner(f"正在导出{selected_module}数据..."):
+                try:
+                    driver = get_neo4j_driver()
+                    with driver.session() as session:
+                        result = session.run("""
+                            MATCH (s:yzbx_Student)-[r:PERFORMED]->(a:yzbx_Activity)
+                            WHERE a.module_name = $module
+                            RETURN s.student_id as 学号,
+                                   s.name as 姓名,
+                                   a.activity_type as 活动类型,
+                                   a.content_name as 内容名称,
+                                   toString(a.timestamp) as 学习时间,
+                                   a.details as 详情
+                            ORDER BY a.timestamp DESC
+                        """, module=selected_module)
+                        data = [dict(record) for record in result]
+                    
+                    if data:
+                        df = pd.DataFrame(data)
+                        csv = df.to_csv(index=False, encoding='utf-8-sig')
+                        
+                        st.success(f"✅ {selected_module}记录: {len(data)}条")
+                        st.dataframe(df.head(50), use_container_width=True)
+                        if len(data) > 50:
+                            st.info(f"预览显示前50条，共{len(data)}条记录")
+                        
+                        st.download_button(
+                            label=f"⬇️ 下载{selected_module}数据 CSV",
+                            data=csv,
+                            file_name=f"{selected_module}_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                            mime="text/csv",
+                            key=f"download_{selected_module}_csv"
+                        )
+                    else:
+                        st.warning(f"{selected_module}暂无数据")
+                except Exception as e:
+                    st.error(f"导出失败: {e}")
     
     # ===== 学生管理 =====
     with tab2:
