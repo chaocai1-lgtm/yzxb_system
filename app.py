@@ -1521,6 +1521,39 @@ def render_data_management():
         
         # 按模块导出
         st.markdown("#### 📂 按模块导出学习记录")
+        
+        # 添加调试工具
+        with st.expander("🔧 调试工具：查看数据库中的模块名称", expanded=False):
+            try:
+                driver = get_neo4j_driver()
+                with driver.session() as session:
+                    # 查询所有不同的模块名称
+                    result = session.run("""
+                        MATCH (a:yzbx_Activity)
+                        RETURN DISTINCT a.module_name as module_name, count(a) as count
+                        ORDER BY count DESC
+                    """)
+                    module_stats = [dict(record) for record in result]
+                
+                if module_stats:
+                    st.write("**数据库中实际存储的模块名称及记录数：**")
+                    for stat in module_stats:
+                        st.write(f"- `{stat['module_name']}`: {stat['count']}条记录")
+                    
+                    # 检查模块名称匹配情况
+                    st.write("**匹配检查：**")
+                    db_modules = [s['module_name'] for s in module_stats]
+                    expected_modules = ["病例库", "知识图谱", "能力推荐", "课中互动"]
+                    for expected in expected_modules:
+                        if expected in db_modules:
+                            st.success(f"✅ `{expected}` - 匹配成功")
+                        else:
+                            st.error(f"❌ `{expected}` - 未在数据库中找到")
+                else:
+                    st.warning("数据库中没有任何活动记录")
+            except Exception as e:
+                st.error(f"调试查询失败: {e}")
+        
         module_col1, module_col2, module_col3, module_col4 = st.columns(4)
         
         modules = ["病例库", "知识图谱", "能力推荐", "课中互动"]
@@ -1530,13 +1563,24 @@ def render_data_management():
             with [module_col1, module_col2, module_col3, module_col4][i]:
                 if st.button(f"📥 {module}", key=f"export_btn_{module}", use_container_width=True):
                     selected_module = module
+                    st.session_state.selected_export_module = module
+        
+        # 使用 session_state 保持选择状态
+        if 'selected_export_module' not in st.session_state:
+            st.session_state.selected_export_module = None
+        
+        display_module = selected_module or st.session_state.selected_export_module
         
         # 如果选择了模块，执行导出
-        if selected_module:
-            with st.spinner(f"正在导出{selected_module}数据..."):
+        if display_module:
+            st.markdown(f"**正在查看：{display_module}**")
+            with st.spinner(f"正在加载{display_module}数据..."):
                 try:
                     driver = get_neo4j_driver()
                     with driver.session() as session:
+                        # 添加调试信息
+                        st.write(f"🔍 查询参数: module_name = `{display_module}`")
+                        
                         result = session.run("""
                             MATCH (s:yzbx_Student)-[r:PERFORMED]->(a:yzbx_Activity)
                             WHERE a.module_name = $module
@@ -1547,27 +1591,30 @@ def render_data_management():
                                    toString(a.timestamp) as 学习时间,
                                    a.details as 详情
                             ORDER BY a.timestamp DESC
-                        """, module=selected_module)
+                        """, module=display_module)
                         data = [dict(record) for record in result]
+                        
+                        st.write(f"🔍 查询结果: {len(data)}条记录")
                     
                     if data:
                         df = pd.DataFrame(data)
                         csv = df.to_csv(index=False, encoding='utf-8-sig')
                         
-                        st.success(f"✅ {selected_module}记录: {len(data)}条")
+                        st.success(f"✅ {display_module}记录: {len(data)}条")
                         st.dataframe(df.head(50), use_container_width=True)
                         if len(data) > 50:
                             st.info(f"预览显示前50条，共{len(data)}条记录")
                         
                         st.download_button(
-                            label=f"⬇️ 下载{selected_module}数据 CSV",
+                            label=f"⬇️ 下载{display_module}数据 CSV",
                             data=csv,
-                            file_name=f"{selected_module}_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                            file_name=f"{display_module}_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
                             mime="text/csv",
-                            key=f"download_{selected_module}_csv"
+                            key=f"download_{display_module}_csv"
                         )
                     else:
-                        st.warning(f"{selected_module}暂无数据")
+                        st.warning(f"{display_module}暂无数据")
+                        st.info("💡 提示：展开上方的'调试工具'查看数据库中实际的模块名称")
                 except Exception as e:
                     st.error(f"导出失败: {e}")
     
