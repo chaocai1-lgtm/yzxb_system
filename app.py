@@ -764,8 +764,15 @@ def render_teacher_dashboard():
     with st.expander("🔍 调试信息（点击展开）", expanded=False):
         st.write("**数据库连接状态:**")
         st.write(f"- Neo4j可用: {has_neo4j}")
+        
+        # 显示 secrets 中所有可用的 keys
+        from modules.auth import get_all_secret_keys
+        all_keys = get_all_secret_keys()
+        st.write(f"**所有 secrets keys:** `{all_keys}`")
+        
         st.write(f"- 环境变量检查: NEO4J_URI={'已设置' if st.secrets.get('NEO4J_URI') else '未设置'}")
         st.write(f"- 环境变量检查: NEO4J_USER={'已设置' if st.secrets.get('NEO4J_USER') else '未设置'}")
+        st.write(f"- 环境变量检查: NEO4J_USERNAME={'已设置' if st.secrets.get('NEO4J_USERNAME') else '未设置'}")
         st.write(f"- 环境变量检查: NEO4J_PASSWORD={'已设置' if st.secrets.get('NEO4J_PASSWORD') else '未设置'}")
         
         if not has_neo4j:
@@ -776,11 +783,11 @@ def render_teacher_dashboard():
             # 显示secrets的实际值（仅用于调试）
             try:
                 uri = st.secrets.get('NEO4J_URI', '未设置')
-                user = st.secrets.get('NEO4J_USER', '未设置')
+                user = st.secrets.get('NEO4J_USER') or st.secrets.get('NEO4J_USERNAME') or '未设置'
                 # 不显示完整密码，只显示是否为空
                 pwd_status = '已设置且非空' if st.secrets.get('NEO4J_PASSWORD') else '未设置或为空'
                 st.write(f"- NEO4J_URI值: `{uri}`")
-                st.write(f"- NEO4J_USER值: `{user}`")
+                st.write(f"- NEO4J_USER/USERNAME值: `{user}`")
                 st.write(f"- NEO4J_PASSWORD状态: {pwd_status}")
             except Exception as e:
                 st.write(f"- 读取secrets失败: {e}")

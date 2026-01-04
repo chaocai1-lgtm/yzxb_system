@@ -15,21 +15,59 @@ except ImportError:
     GraphDatabase = None
 
 # 优先从 st.secrets 读取配置（Streamlit Cloud），否则从 config.settings 读取（本地）
+NEO4J_URI = None
+NEO4J_USERNAME = None
+NEO4J_PASSWORD = None
+
+def _get_secret(possible_keys):
+    """尝试多个可能的 key 名称获取 secret"""
+    for key in possible_keys:
+        try:
+            val = st.secrets.get(key)
+            if val:
+                return val
+        except:
+            pass
+    return None
+
 try:
-    NEO4J_URI = st.secrets.get("NEO4J_URI") or st.secrets.get("neo4j_uri")
-    NEO4J_USERNAME = st.secrets.get("NEO4J_USER") or st.secrets.get("neo4j_user") or st.secrets.get("NEO4J_USERNAME")
-    NEO4J_PASSWORD = st.secrets.get("NEO4J_PASSWORD") or st.secrets.get("neo4j_password")
-    print(f"[配置加载] 从 st.secrets 读取配置: URI={'已设置' if NEO4J_URI else '未设置'}")
+    # 尝试多种可能的 key 名称
+    NEO4J_URI = _get_secret(["NEO4J_URI", "neo4j_uri", "NEO4J_URL", "neo4j_url"])
+    NEO4J_USERNAME = _get_secret(["NEO4J_USERNAME", "neo4j_username", "NEO4J_USER", "neo4j_user", "username"])
+    NEO4J_PASSWORD = _get_secret(["NEO4J_PASSWORD", "neo4j_password", "password"])
+    
+    # 调试信息
+    print(f"[配置加载] 从 st.secrets 读取:")
+    print(f"  - URI: {'已设置' if NEO4J_URI else '未设置'}")
+    print(f"  - USERNAME: {'已设置' if NEO4J_USERNAME else '未设置'}")
+    print(f"  - PASSWORD: {'已设置' if NEO4J_PASSWORD else '未设置'}")
+    
+    # 如果 st.secrets 未设置完整，尝试从 config.settings 读取
+    if not all([NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD]):
+        print("[配置加载] st.secrets 配置不完整，尝试从 config.settings 读取")
+        try:
+            from config.settings import NEO4J_URI as cfg_uri, NEO4J_USERNAME as cfg_user, NEO4J_PASSWORD as cfg_pwd
+            NEO4J_URI = NEO4J_URI or cfg_uri
+            NEO4J_USERNAME = NEO4J_USERNAME or cfg_user
+            NEO4J_PASSWORD = NEO4J_PASSWORD or cfg_pwd
+            print(f"[配置加载] 从 config.settings 补充完成")
+        except (ImportError, AttributeError) as e:
+            print(f"[配置加载] config.settings 读取失败: {e}")
 except Exception as e:
-    print(f"[配置加载] 从 st.secrets 读取失败: {e}，尝试从 config.settings 读取")
+    print(f"[配置加载] 读取配置异常: {e}")
     try:
         from config.settings import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD
-        print(f"[配置加载] 从 config.settings 读取配置: URI={'已设置' if NEO4J_URI else '未设置'}")
     except (ImportError, AttributeError):
         NEO4J_URI = None
         NEO4J_USERNAME = None
         NEO4J_PASSWORD = None
-        print("[配置加载] 无法从任何来源读取Neo4j配置")
+
+def get_all_secret_keys():
+    """获取所有可用的 secrets keys（用于调试）"""
+    try:
+        return list(st.secrets.keys()) if hasattr(st.secrets, 'keys') else []
+    except:
+        return []
 
 # 教师密码
 TEACHER_PASSWORD = "admin888"
