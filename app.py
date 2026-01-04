@@ -745,6 +745,10 @@ def render_teacher_dashboard():
     active_7d = summary.get('active_students', 0)
     total_acts = summary.get('total_activities', 0)
     
+    # 调试信息（可以在终端看到）
+    print(f"[教师端调试] Neo4j可用: {has_neo4j}")
+    print(f"[教师端调试] 学生总数: {total_students}, 今日活跃: {today_active}, 7日活跃: {active_7d}, 总活动: {total_acts}")
+    
     # 只在真正无数据时提示（避免本地开发时误报）
     if total_students == 0 and not has_neo4j:
         st.info("💡 提示：当前无学生数据。学生登录使用后即可在此查看学习统计。")
@@ -784,9 +788,11 @@ def render_teacher_dashboard():
                 visit_count = stats.get('total_visits', 0)
                 student_count = stats.get('unique_students', 0)
                 completion = int((student_count / total_students * 100)) if total_students > 0 else 0
+                print(f"[教师端调试] {module}: 访问{visit_count}次, 学生{student_count}人, 参与率{completion}%")
             else:
                 visit_count = 0
                 completion = 0
+                print(f"[教师端调试] {module}: Neo4j不可用，显示0")
                 
             st.markdown(f"""
             <div style="background: #fff; border-radius: 12px; padding: 20px; 
