@@ -14,12 +14,22 @@ except ImportError:
     HAS_NEO4J = False
     GraphDatabase = None
 
+# 优先从 st.secrets 读取配置（Streamlit Cloud），否则从 config.settings 读取（本地）
 try:
-    from config.settings import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD
-except (ImportError, AttributeError):
-    NEO4J_URI = None
-    NEO4J_USERNAME = None
-    NEO4J_PASSWORD = None
+    NEO4J_URI = st.secrets.get("NEO4J_URI") or st.secrets.get("neo4j_uri")
+    NEO4J_USERNAME = st.secrets.get("NEO4J_USER") or st.secrets.get("neo4j_user") or st.secrets.get("NEO4J_USERNAME")
+    NEO4J_PASSWORD = st.secrets.get("NEO4J_PASSWORD") or st.secrets.get("neo4j_password")
+    print(f"[配置加载] 从 st.secrets 读取配置: URI={'已设置' if NEO4J_URI else '未设置'}")
+except Exception as e:
+    print(f"[配置加载] 从 st.secrets 读取失败: {e}，尝试从 config.settings 读取")
+    try:
+        from config.settings import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD
+        print(f"[配置加载] 从 config.settings 读取配置: URI={'已设置' if NEO4J_URI else '未设置'}")
+    except (ImportError, AttributeError):
+        NEO4J_URI = None
+        NEO4J_USERNAME = None
+        NEO4J_PASSWORD = None
+        print("[配置加载] 无法从任何来源读取Neo4j配置")
 
 # 教师密码
 TEACHER_PASSWORD = "admin888"
@@ -73,21 +83,37 @@ def get_neo4j_driver():
 
 # 全局变量：标记Neo4j是否可用
 _neo4j_available = None
+_neo4j_error = None
 
 def check_neo4j_available():
     """检查Neo4j是否可用"""
-    global _neo4j_available
+    global _neo4j_available, _neo4j_error
     if _neo4j_available is not None:
         return _neo4j_available
     try:
         driver = get_neo4j_driver()
+        if driver is None:
+            _neo4j_available = False
+            _neo4j_error = "无法创建Neo4j驱动：get_neo4j_driver()返回None"
+            print(f"[Neo4j检查失败] {_neo4j_error}")
+            return False
+            
         with driver.session() as session:
-            session.run("RETURN 1")
+            result = session.run("RETURN 1")
+            result.single()
         # 不关闭driver，保持连接池复用
         _neo4j_available = True
-    except:
+        _neo4j_error = None
+        print("[Neo4j检查成功] 连接正常")
+    except Exception as e:
         _neo4j_available = False
+        _neo4j_error = str(e)
+        print(f"[Neo4j检查失败] {e}")
     return _neo4j_available
+
+def get_neo4j_error():
+    """获取Neo4j连接错误信息"""
+    return _neo4j_error
 
 def register_student(student_id, student_name):
     """注册或更新学生信息"""
