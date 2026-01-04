@@ -8,17 +8,12 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from neo4j import GraphDatabase
 from modules.auth import (
     get_all_students, get_student_activities, get_module_statistics,
     delete_student_data, delete_all_activities, check_neo4j_available,
-    get_single_module_statistics
+    get_single_module_statistics, get_neo4j_driver
 )
 from config.settings import *
-
-def get_neo4j_driver():
-    """获取Neo4j连接"""
-    return GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
 def get_activity_summary():
     """获取活动概况"""
@@ -58,7 +53,6 @@ def get_activity_summary():
             """)
             active_students = result.single()['count']
         
-        driver.close()
         return {
             'total_students': total_students,
             'total_activities': total_activities,
@@ -91,7 +85,6 @@ def get_daily_activity_trend(days=7):
             
             trend = [dict(record) for record in result]
         
-        driver.close()
         return trend
     except Exception:
         return []
@@ -113,7 +106,6 @@ def get_module_usage():
             
             usage = [dict(record) for record in result]
         
-        driver.close()
         return usage
     except Exception:
         return []
@@ -149,7 +141,6 @@ def get_popular_content(module=None, limit=10):
             result = session.run(query, **params)
             content = [dict(record) for record in result]
         
-        driver.close()
         return content
     except Exception:
         return []
@@ -172,7 +163,6 @@ def get_student_learning_profile(student_id):
             student_info = dict(result.single()) if result.peek() else None
             
             if not student_info:
-                driver.close()
                 return None
             
             # 各模块活动统计
@@ -203,8 +193,6 @@ def get_student_learning_profile(student_id):
             """, student_id=student_id)
             
             recent_content = [dict(record) for record in result]
-        
-        driver.close()
         
         return {
             'info': student_info,
@@ -250,8 +238,6 @@ def get_classroom_interaction_stats():
             """)
             
             participation = [dict(record) for record in result]
-        
-        driver.close()
         
         return {
             'questions': questions,

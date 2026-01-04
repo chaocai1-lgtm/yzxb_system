@@ -5,7 +5,6 @@
 
 import streamlit as st
 from datetime import datetime
-from neo4j import GraphDatabase
 from openai import OpenAI
 from streamlit_autorefresh import st_autorefresh
 from config.settings import *
@@ -14,6 +13,11 @@ def check_neo4j_available():
     """检查Neo4j是否可用"""
     from modules.auth import check_neo4j_available as auth_check
     return auth_check()
+
+def get_neo4j_driver():
+    """获取Neo4j连接（复用auth模块的缓存连接）"""
+    from modules.auth import get_neo4j_driver as auth_get_driver
+    return auth_get_driver()
 
 def get_current_student():
     """获取当前学生信息"""
@@ -43,7 +47,7 @@ def create_question(question_text):
         return None
     
     try:
-        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+        driver = get_neo4j_driver()
         
         with driver.session() as session:
             # 先关闭所有活跃问题
@@ -62,7 +66,6 @@ def create_question(question_text):
             
             question_id = result.single()['id']
         
-        driver.close()
         return question_id
     except Exception:
         return None
@@ -73,7 +76,7 @@ def get_active_question():
         return None
     
     try:
-        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+        driver = get_neo4j_driver()
         
         with driver.session() as session:
             result = session.run("""
@@ -86,7 +89,6 @@ def get_active_question():
             record = result.single()
             question = dict(record) if record else None
         
-        driver.close()
         return question
     except Exception:
         return None
@@ -97,7 +99,7 @@ def submit_reply(question_id, student_name, content):
         return
     
     try:
-        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+        driver = get_neo4j_driver()
         
         with driver.session() as session:
             session.run("""
@@ -109,8 +111,6 @@ def submit_reply(question_id, student_name, content):
                     length: size($content)
                 }]->(q)
             """, question_id=question_id, student_name=student_name, content=content)
-        
-        driver.close()
     except Exception:
         pass
 
@@ -120,7 +120,7 @@ def get_recent_replies(question_id, limit=20):
         return []
     
     try:
-        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+        driver = get_neo4j_driver()
         
         with driver.session() as session:
             result = session.run("""
@@ -132,7 +132,6 @@ def get_recent_replies(question_id, limit=20):
             
             replies = [dict(record) for record in result]
         
-        driver.close()
         return replies
     except Exception:
         return []

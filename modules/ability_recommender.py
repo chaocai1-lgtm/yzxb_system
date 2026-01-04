@@ -4,7 +4,6 @@
 """
 
 import streamlit as st
-from neo4j import GraphDatabase
 from openai import OpenAI
 from config.settings import *
 
@@ -12,6 +11,11 @@ def check_neo4j_available():
     """检查Neo4j是否可用"""
     from modules.auth import check_neo4j_available as auth_check
     return auth_check()
+
+def get_neo4j_driver():
+    """获取Neo4j连接（复用auth模块的缓存连接）"""
+    from modules.auth import get_neo4j_driver as auth_get_driver
+    return auth_get_driver()
 
 def get_current_student():
     """获取当前学生信息"""
@@ -41,7 +45,7 @@ def get_all_abilities():
         return []
     
     try:
-        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+        driver = get_neo4j_driver()
         
         with driver.session() as session:
             result = session.run("""
@@ -52,7 +56,7 @@ def get_all_abilities():
             
             abilities = [dict(record) for record in result]
         
-        driver.close()
+        # 不关闭driver，保持连接池复用
         return abilities
     except Exception:
         return []
@@ -64,7 +68,7 @@ def analyze_learning_path(selected_abilities, mastery_levels, abilities_info=Non
     # 尝试从Neo4j获取知识点数据
     if check_neo4j_available():
         try:
-            driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+            driver = get_neo4j_driver()
             
             # 获取能力需要的知识点
             with driver.session() as session:
@@ -78,7 +82,7 @@ def analyze_learning_path(selected_abilities, mastery_levels, abilities_info=Non
             
                 required_knowledge = [dict(record) for record in result]
             
-            driver.close()
+            # 不关闭driver，保持连接池复用
         except Exception:
             required_knowledge = []
     

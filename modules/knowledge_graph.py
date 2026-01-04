@@ -5,7 +5,6 @@
 
 import streamlit as st
 import streamlit.components.v1 as components
-from neo4j import GraphDatabase
 from pyvis.network import Network
 from config.settings import *
 
@@ -13,6 +12,11 @@ def check_neo4j_available():
     """检查Neo4j是否可用"""
     from modules.auth import check_neo4j_available as auth_check
     return auth_check()
+
+def get_neo4j_driver():
+    """获取Neo4j连接（复用auth模块的缓存连接）"""
+    from modules.auth import get_neo4j_driver as auth_get_driver
+    return auth_get_driver()
 
 def get_current_student():
     """获取当前学生信息"""
@@ -42,7 +46,7 @@ def get_knowledge_graph_data(module_id=None):
         return []
     
     try:
-        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+        driver = get_neo4j_driver()
         
         with driver.session() as session:
             if module_id:
@@ -62,7 +66,7 @@ def get_knowledge_graph_data(module_id=None):
             
             data = [dict(record) for record in result]
         
-        driver.close()
+        # 不关闭driver，保持连接池复用
         return data
     except Exception:
         return []

@@ -11,17 +11,37 @@ from config.settings import *
 # 教师密码
 TEACHER_PASSWORD = "admin888"
 
+# 全局缓存的Neo4j驱动（避免重复创建连接）
+_cached_driver = None
+
 def get_neo4j_driver():
-    """获取Neo4j连接"""
-    # neo4j+ssc协议已经处理SSL和自签名证书信任
-    # 不需要额外的encrypted参数，URI协议已指定
+    """获取Neo4j连接（使用缓存避免重复连接）"""
+    global _cached_driver
+    
+    # 如果已有缓存的driver，直接返回
+    if _cached_driver is not None:
+        try:
+            # 验证连接是否仍然有效
+            _cached_driver.verify_connectivity()
+            return _cached_driver
+        except:
+            # 连接失效，重新创建
+            try:
+                _cached_driver.close()
+            except:
+                pass
+            _cached_driver = None
+    
+    # 创建新的driver
     try:
-        return GraphDatabase.driver(
+        _cached_driver = GraphDatabase.driver(
             NEO4J_URI, 
             auth=(NEO4J_USERNAME, NEO4J_PASSWORD),
-            max_connection_lifetime=30,
-            connection_timeout=15
+            max_connection_lifetime=300,  # 5分钟
+            connection_timeout=10,
+            max_connection_pool_size=10
         )
+        return _cached_driver
     except Exception as e:
         print(f"Neo4j连接创建失败: {e}")
         raise
@@ -38,7 +58,7 @@ def check_neo4j_available():
         driver = get_neo4j_driver()
         with driver.session() as session:
             session.run("RETURN 1")
-        driver.close()
+        # 不关闭driver，保持连接池复用
         _neo4j_available = True
     except:
         _neo4j_available = False
@@ -57,7 +77,7 @@ def register_student(student_id, student_name):
                     s.login_count = COALESCE(s.login_count, 0) + 1
             """, student_id=student_id, name=student_name)
         
-        driver.close()
+        # 不关闭driver，保持连接池复用
     except Exception as e:
         print(f"Neo4j连接失败，跳过学生注册: {e}")
         pass
@@ -87,8 +107,6 @@ def log_activity(student_id, activity_type, module_name, content_id=None, conten
             """, student_id=student_id, activity_type=activity_type, 
                 module_name=module_name, content_id=content_id,
                 content_name=content_name, details=details)
-        
-        driver.close()
     except Exception as e:
         pass
 
@@ -114,7 +132,6 @@ def get_all_students():
             
             students = [dict(record) for record in result]
         
-        driver.close()
         return students
     except:
         return []
@@ -158,7 +175,6 @@ def get_student_activities(student_id=None, module=None, limit=100):
             result = session.run(query, **params)
             activities = [dict(record) for record in result]
         
-        driver.close()
         return activities
     except:
         return []
@@ -188,7 +204,6 @@ def get_module_statistics():
             
             stats = [dict(record) for record in result]
         
-        driver.close()
         return stats
     except:
         return []
@@ -223,8 +238,6 @@ def get_single_module_statistics(module_name):
             record = result.single()
             today_count = record['today_count'] if record else 0
         
-        driver.close()
-        
         return {
             'module': module_name,
             'total_activities': total_activities,
@@ -254,8 +267,6 @@ def delete_student_data(student_id):
                 MATCH (s:yzbx_Student {student_id: $student_id})
                 DETACH DELETE s
             """, student_id=student_id)
-        
-        driver.close()
     except:
         pass
 
@@ -269,8 +280,6 @@ def delete_all_activities():
         
         with driver.session() as session:
             session.run("MATCH (a:yzbx_Activity) DETACH DELETE a")
-        
-        driver.close()
     except:
         pass
 

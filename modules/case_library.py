@@ -5,7 +5,6 @@
 
 import streamlit as st
 from elasticsearch import Elasticsearch
-from neo4j import GraphDatabase
 from config.settings import *
 
 def ensure_list(value, default=None):
@@ -23,6 +22,11 @@ def check_neo4j_available():
     """检查Neo4j是否可用"""
     from modules.auth import check_neo4j_available as auth_check
     return auth_check()
+
+def get_neo4j_driver():
+    """获取Neo4j连接（复用auth模块的缓存连接）"""
+    from modules.auth import get_neo4j_driver as auth_get_driver
+    return auth_get_driver()
 
 def get_current_student():
     """获取当前学生信息"""
@@ -89,7 +93,7 @@ def get_case_detail(case_id):
         return None
     
     try:
-        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+        driver = get_neo4j_driver()
         
         with driver.session() as session:
             # 获取病例基本信息
@@ -100,7 +104,6 @@ def get_case_detail(case_id):
             
             case = result.single()
             if not case:
-                driver.close()
                 return None
             
             case_data = dict(case['c'])
@@ -113,7 +116,6 @@ def get_case_detail(case_id):
             
             case_data['knowledge_points'] = [dict(record) for record in result]
         
-        driver.close()
         return case_data
     except Exception:
         return None
