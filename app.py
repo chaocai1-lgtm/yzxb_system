@@ -1325,7 +1325,7 @@ def render_module_analytics(module_name):
             with driver.session() as session:
                 result = session.run("""
                     MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
-                    WHERE a.module = $module_name
+                    WHERE COALESCE(a.module_name, a.module) = $module_name
                     RETURN s.student_id as student_id, 
                            count(a) as activity_count
                     ORDER BY activity_count DESC
@@ -1383,7 +1383,7 @@ def render_module_analytics(module_name):
                 with driver.session() as session:
                     result = session.run("""
                         MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
-                        WHERE a.module = $module_name
+                        WHERE COALESCE(a.module_name, a.module) = $module_name
                         RETURN s.student_id as student_id, 
                                count(a) as activity_count
                         ORDER BY activity_count DESC
@@ -1489,8 +1489,8 @@ def render_data_management():
                                 MATCH (s:yzbx_Student)-[r:PERFORMED]->(a:yzbx_Activity)
                                 RETURN s.student_id as 学号,
                                        s.name as 姓名,
-                                       a.module_name as 学习模块,
-                                       a.activity_type as 活动类型,
+                                       COALESCE(a.module_name, a.module) as 学习模块,
+                                       COALESCE(a.activity_type, a.type) as 活动类型,
                                        a.content_name as 内容名称,
                                        toString(a.timestamp) as 学习时间,
                                        a.details as 详情
@@ -1527,10 +1527,10 @@ def render_data_management():
             try:
                 driver = get_neo4j_driver()
                 with driver.session() as session:
-                    # 查询所有不同的模块名称
+                    # 查询所有不同的模块名称(兼容新旧字段)
                     result = session.run("""
                         MATCH (a:yzbx_Activity)
-                        RETURN DISTINCT a.module_name as module_name, count(a) as count
+                        RETURN DISTINCT COALESCE(a.module_name, a.module) as module_name, count(a) as count
                         ORDER BY count DESC
                     """)
                     module_stats = [dict(record) for record in result]
@@ -1583,10 +1583,10 @@ def render_data_management():
                         
                         result = session.run("""
                             MATCH (s:yzbx_Student)-[r:PERFORMED]->(a:yzbx_Activity)
-                            WHERE a.module_name = $module
+                            WHERE COALESCE(a.module_name, a.module) = $module
                             RETURN s.student_id as 学号,
                                    s.name as 姓名,
-                                   a.activity_type as 活动类型,
+                                   COALESCE(a.activity_type, a.type) as 活动类型,
                                    a.content_name as 内容名称,
                                    toString(a.timestamp) as 学习时间,
                                    a.details as 详情

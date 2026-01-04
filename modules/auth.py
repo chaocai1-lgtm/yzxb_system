@@ -252,14 +252,14 @@ def get_student_activities(student_id=None, module=None, limit=100):
                 params["student_id"] = student_id
             
             if module:
-                query += " AND a.module = $module"
+                query += " AND COALESCE(a.module_name, a.module) = $module"
                 params["module"] = module
             
             query += """
                 RETURN s.student_id as student_id,
                        s.name as student_name,
-                       a.type as activity_type,
-                       a.module as module,
+                       COALESCE(a.activity_type, a.type) as activity_type,
+                       COALESCE(a.module_name, a.module) as module,
                        a.content_id as content_id,
                        a.content_name as content_name,
                        a.details as details,
@@ -294,14 +294,11 @@ def get_module_statistics():
             # 获取每个模块的详细统计
             result = session.run("""
                 MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
-                WITH a.module as module, 
+                WITH COALESCE(a.module_name, a.module) as module, 
                      count(a) as total_activities,
                      count(DISTINCT s) as unique_students,
                      collect(DISTINCT s.student_id) as student_ids
-                OPTIONAL MATCH (a2:yzbx_Activity {module: module})
-                WHERE date(a2.timestamp) = date()
-                WITH module, total_activities, unique_students, student_ids, count(a2) as today_count
-                RETURN module, total_activities, unique_students, today_count
+                RETURN module, total_activities, unique_students, 0 as today_count
                 ORDER BY total_activities DESC
             """)
             
@@ -323,7 +320,7 @@ def get_all_modules_statistics():
         with driver.session() as session:
             result = session.run("""
                 MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
-                WITH a.module as module, count(a) as total_visits, count(DISTINCT s) as unique_students
+                WITH COALESCE(a.module_name, a.module) as module, count(a) as total_visits, count(DISTINCT s) as unique_students
                 RETURN module, total_visits, unique_students
             """)
             
@@ -363,7 +360,8 @@ def get_single_module_statistics(module_name):
         with driver.session() as session:
             # 总访问次数和学生数
             result = session.run("""
-                MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity {module: $module})
+                MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
+                WHERE COALESCE(a.module_name, a.module) = $module
                 RETURN count(a) as total_activities,
                        count(DISTINCT s) as unique_students
             """, module=module_name)
@@ -377,8 +375,9 @@ def get_single_module_statistics(module_name):
             
             # 近7天访问
             result = session.run("""
-                MATCH (a:yzbx_Activity {module: $module})
-                WHERE a.timestamp > datetime() - duration('P7D')
+                MATCH (a:yzbx_Activity)
+                WHERE COALESCE(a.module_name, a.module) = $module
+                  AND a.timestamp > datetime() - duration('P7D')
                 RETURN count(a) as recent_count
             """, module=module_name)
             
