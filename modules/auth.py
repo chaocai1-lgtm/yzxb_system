@@ -127,6 +127,7 @@ def log_activity(student_id, activity_type, module_name, content_id=None, conten
     except Exception as e:
         pass
 
+@st.cache_data(ttl=300, show_spinner=False)  # 缓存5分钟
 def get_all_students():
     """获取所有学生列表"""
     if not check_neo4j_available():
@@ -151,6 +152,7 @@ def get_all_students():
     except:
         return []
 
+@st.cache_data(ttl=300, show_spinner=False)  # 缓存5分钟
 def get_student_activities(student_id=None, module=None, limit=100):
     """获取学生活动记录"""
     if not check_neo4j_available():
@@ -188,10 +190,17 @@ def get_student_activities(student_id=None, module=None, limit=100):
             """
             
             result = session.run(query, **params)
-            activities = [dict(record) for record in result]
+            activities = []
+            for record in result:
+                activity = dict(record)
+                # 将timestamp转换为字符串，避免Date序列化问题
+                if 'timestamp' in activity and activity['timestamp']:
+                    activity['timestamp'] = str(activity['timestamp'])
+                activities.append(activity)
         
         return activities
-    except:
+    except Exception as e:
+        print(f"获取学生活动失败: {e}")
         return []
 
 def get_module_statistics():
@@ -223,6 +232,7 @@ def get_module_statistics():
     except:
         return []
 
+@st.cache_data(ttl=300, show_spinner=False)  # 缓存5分钟
 def get_single_module_statistics(module_name):
     """获取单个模块的详细统计"""
     if not check_neo4j_available():

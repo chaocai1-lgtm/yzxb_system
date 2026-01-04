@@ -733,12 +733,14 @@ def render_teacher_dashboard():
     </div>
     """, unsafe_allow_html=True)
     
-    # 获取真实数据
-    has_neo4j = check_neo4j_available()
-    
-    # 获取数据
-    summary = get_activity_summary()
-    all_students = get_all_students() if has_neo4j else []
+    # 显示加载进度
+    with st.spinner("正在加载数据..."):
+        # 获取真实数据
+        has_neo4j = check_neo4j_available()
+        
+        # 获取数据
+        summary = get_activity_summary()
+        all_students = get_all_students() if has_neo4j else []
     
     # 计算统计数据
     total_students = summary.get('total_students', 0)
@@ -1017,7 +1019,20 @@ def render_module_analytics(module_name):
     from modules.auth import check_neo4j_available, get_all_students, get_student_activities, get_single_module_statistics, get_neo4j_driver
     import pandas as pd
     
-    has_neo4j = check_neo4j_available()
+    # 先显示标题
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                padding: 25px; border-radius: 16px; margin-bottom: 30px;">
+        <h2 style="margin: 0; color: white;">📊 {module_name} - 数据分析</h2>
+        <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9);">
+            查看学生在该模块的学习情况和整体数据统计
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 使用spinner显示加载状态
+    with st.spinner("正在加载数据..."):
+        has_neo4j = check_neo4j_available()
     
     # 调试信息面板
     with st.expander("🔧 调试信息（点击展开）", expanded=False):
@@ -1040,16 +1055,6 @@ def render_module_analytics(module_name):
                 st.error(f"查询出错: {e}")
         else:
             st.warning("Neo4j不可用，无法获取数据")
-    
-    st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                padding: 25px; border-radius: 16px; margin-bottom: 30px;">
-        <h2 style="margin: 0; color: white;">📊 {module_name} - 数据分析</h2>
-        <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9);">
-            查看学生在该模块的学习情况和整体数据统计
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
     
     # 选项卡：个人数据 / 整体数据
     tab1, tab2 = st.tabs(["👤 学生个人数据", "📈 整体统计数据"])
@@ -1159,9 +1164,8 @@ def render_module_analytics(module_name):
             with driver.session() as session:
                 result = session.run("""
                     MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
-                    WHERE a.module_name = $module_name
+                    WHERE a.module = $module_name
                     RETURN s.student_id as student_id, 
-                           s.name as name,
                            count(a) as activity_count
                     ORDER BY activity_count DESC
                     LIMIT 10
@@ -1172,7 +1176,6 @@ def render_module_analytics(module_name):
                     ranking.append({
                         "排名": "🥇" if i == 0 else ("🥈" if i == 1 else ("🥉" if i == 2 else str(i+1))),
                         "学号": record['student_id'],
-                        "姓名": record['name'] if record['name'] else "未设置",
                         "学习记录数": record['activity_count']
                     })
                 
