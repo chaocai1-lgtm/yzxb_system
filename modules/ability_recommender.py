@@ -496,13 +496,22 @@ def render_ability_recommender():
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #667eea;">
                     <p style="margin: 0; color: #666;">🤖 <strong>AI正在思考...</strong></p>
                     <p style="margin: 5px 0 0 0; color: #888; font-size: 14px;">
-                        正在分析您的能力水平、学习目标，结合牙周病学知识体系生成最优学习路径...
+                        正在调用DeepSeek API，分析您的能力水平、学习目标，结合牙周病学知识体系生成最优学习路径...
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
                 
+                # 添加调试信息显示
+                debug_box = st.empty()
+                debug_box.info(f"🔧 调试：准备调用AI API，已选择 {len(selected_abilities)} 个能力")
+                
                 try:
                     recommendation = analyze_learning_path(selected_abilities, mastery_levels, abilities)
+                    
+                    # 检查是否真的调用了API（检查返回内容是否包含"演示数据"标识）
+                    is_fallback = "⚠️ 注意：AI分析服务暂时不可用" in recommendation
+                    
+                    debug_box.empty()  # 清除调试信息
                     
                     # 步骤3完成
                     step3.markdown("""
@@ -526,24 +535,34 @@ def render_ability_recommender():
                     """, unsafe_allow_html=True)
                     
                     # 显示AI推荐结果
+                    if is_fallback:
+                        st.warning("⚠️ AI服务暂时不可用，显示预设推荐方案")
+                    else:
+                        st.success("✅ DeepSeek AI分析完成！以下是根据您的能力选择生成的个性化推荐")
+                    
                     st.markdown("""
                     <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); 
                                 padding: 20px; border-radius: 12px; margin: 20px 0;">
-                        <h4 style="color: white; margin: 0;">🎯 AI个性化学习推荐</h4>
+                        <h4 style="color: white; margin: 0;">🎯 学习路径推荐</h4>
                     </div>
                     """, unsafe_allow_html=True)
                     
                     st.markdown(recommendation)
                     
                     # 记录AI推荐生成
-                    log_ability_activity("生成AI推荐", details="成功生成学习路径推荐")
+                    log_ability_activity("生成AI推荐", details=f"成功生成学习路径推荐 (使用{'预设方案' if is_fallback else 'AI分析'})")
                     
                     # 保存到session
                     st.session_state['last_recommendation'] = recommendation
+                    st.session_state['last_recommendation_fallback'] = is_fallback
                     
-                    st.success("🎉 推荐生成完成！按照上述路径学习，效率更高！")
+                    if not is_fallback:
+                        st.success("🎉 AI推荐生成完成！这是根据您选择的能力定制的个性化方案")
+                    else:
+                        st.info("💡 提示：AI服务不可用时会显示预设方案，实际部署后将调用真实AI")
                     
                 except Exception as e:
+                    debug_box.error(f"🔧 调试：发生错误 - {str(e)}")
                     step3.markdown("""
                     <div style="text-align: center; padding: 15px; background: #f8d7da; border-radius: 10px; border: 2px solid #dc3545;">
                         <div style="font-size: 30px;">❌</div>
