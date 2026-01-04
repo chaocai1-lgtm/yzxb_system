@@ -1017,28 +1017,38 @@ def render_teacher_dashboard():
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 学生排行榜 - 使用真实数据（缓存优化）
+    # 学生排行榜 - 使用真实数据
     st.markdown("### 🏆 学习排行榜 (Top 10)")
     
     if has_neo4j:
-        # 使用缓存的排行榜函数
+        # 从数据库获取学生活动统计
         try:
-            from modules.auth import get_leaderboard
-            records = get_leaderboard(limit=10)
-            
-            if records:
+            driver = get_neo4j_driver()
+            with driver.session() as session:
+                result = session.run("""
+                    MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
+                    RETURN s.student_id as student_id, 
+                           s.name as name,
+                           count(a) as activity_count,
+                           count(DISTINCT date(a.timestamp)) as active_days
+                    ORDER BY activity_count DESC
+                    LIMIT 10
+                """)
+                
                 leaderboard = []
-                for i, record in enumerate(records):
+                for i, record in enumerate(result):
                     leaderboard.append({
                         "排名": "🥇" if i == 0 else ("🥈" if i == 1 else ("🥉" if i == 2 else str(i+1))),
                         "学号": record['student_id'],
                         "姓名": record['name'] if record['name'] else "未设置",
                         "学习记录数": record['activity_count'],
-                        "活跃天数": record.get('active_days', 0)
+                        "活跃天数": record['active_days']
                     })
-                st.dataframe(pd.DataFrame(leaderboard), use_container_width=True, hide_index=True)
-            else:
-                st.info("暂无学生学习数据")
+                
+                if leaderboard:
+                    st.dataframe(pd.DataFrame(leaderboard), use_container_width=True, hide_index=True)
+                else:
+                    st.info("暂无学生学习数据")
         except Exception as e:
             st.error(f"获取排行榜数据失败: {e}")
     else:
@@ -1308,23 +1318,32 @@ def render_module_analytics(module_name):
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # 显示活跃学生排行（使用缓存）
+        # 显示活跃学生排行
         st.markdown(f"#### 🏆 {module_name}学习排行榜")
         try:
-            from modules.auth import get_leaderboard
-            records = get_leaderboard(limit=10, module_name=module_name)
-            
-            if records:
+            driver = get_neo4j_driver()
+            with driver.session() as session:
+                result = session.run("""
+                    MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
+                    WHERE COALESCE(a.module_name, a.module) = $module_name
+                    RETURN s.student_id as student_id, 
+                           count(a) as activity_count
+                    ORDER BY activity_count DESC
+                    LIMIT 10
+                """, module_name=module_name)
+                
                 ranking = []
-                for i, record in enumerate(records):
+                for i, record in enumerate(result):
                     ranking.append({
                         "排名": "🥇" if i == 0 else ("🥈" if i == 1 else ("🥉" if i == 2 else str(i+1))),
                         "学号": record['student_id'],
                         "学习记录数": record['activity_count']
                     })
-                st.dataframe(pd.DataFrame(ranking), use_container_width=True, hide_index=True)
-            else:
-                st.info(f"暂无{module_name}学习数据")
+                
+                if ranking:
+                    st.dataframe(pd.DataFrame(ranking), use_container_width=True, hide_index=True)
+                else:
+                    st.info(f"暂无{module_name}学习数据")
         except Exception as e:
             st.error(f"获取排行数据失败: {e}")
         
@@ -1356,24 +1375,33 @@ def render_module_analytics(module_name):
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # 学生排行榜（使用缓存，与上方相同，复用已缓存数据）
+        # 学生排行榜
         st.markdown("##### 🏆 学习排行榜 (Top 10)")
         if has_neo4j:
             try:
-                from modules.auth import get_leaderboard
-                records = get_leaderboard(limit=10, module_name=module_name)
-                
-                if records:
+                driver = get_neo4j_driver()
+                with driver.session() as session:
+                    result = session.run("""
+                        MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
+                        WHERE COALESCE(a.module_name, a.module) = $module_name
+                        RETURN s.student_id as student_id, 
+                               count(a) as activity_count
+                        ORDER BY activity_count DESC
+                        LIMIT 10
+                    """, module_name=module_name)
+                    
                     leaderboard = []
-                    for i, record in enumerate(records):
+                    for i, record in enumerate(result):
                         leaderboard.append({
                             "排名": "🥇" if i == 0 else ("🥈" if i == 1 else ("🥉" if i == 2 else str(i+1))),
                             "学号": record['student_id'],
                             "学习记录数": record['activity_count']
                         })
-                    st.dataframe(pd.DataFrame(leaderboard), use_container_width=True, hide_index=True)
-                else:
-                    st.info(f"暂无{module_name}学习数据")
+                    
+                    if leaderboard:
+                        st.dataframe(pd.DataFrame(leaderboard), use_container_width=True, hide_index=True)
+                    else:
+                        st.info(f"暂无{module_name}学习数据")
             except Exception as e:
                 st.error(f"获取排行榜失败: {e}")
         else:
