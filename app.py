@@ -45,6 +45,28 @@ st.markdown("""
         transition: none !important;
     }
     
+    /* 禁用所有过渡动画减少闪烁 */
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+    
+    /* 隐藏Streamlit的状态指示器 */
+    .stStatusWidget,
+    div[data-testid="stStatusWidget"],
+    .stSpinner,
+    .stProgress {
+        display: none !important;
+    }
+    
+    /* 禁止容器透明度变化 */
+    .element-container,
+    .stMarkdown,
+    .stSelectbox,
+    .stTabs {
+        opacity: 1 !important;
+    }
+    
     /* 浅色渐变背景 */
     .stApp {
         background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 50%, #f0f2f5 100%);
