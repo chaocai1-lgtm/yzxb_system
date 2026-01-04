@@ -4,8 +4,21 @@
 """
 
 import streamlit as st
-from elasticsearch import Elasticsearch
-from config.settings import *
+
+# 可选导入Elasticsearch（仅本地开发需要）
+try:
+    from elasticsearch import Elasticsearch
+    HAS_ELASTICSEARCH = True
+except ImportError:
+    HAS_ELASTICSEARCH = False
+    Elasticsearch = None
+
+try:
+    from config.settings import ELASTICSEARCH_CLOUD_ID, ELASTICSEARCH_USERNAME, ELASTICSEARCH_PASSWORD
+except (ImportError, AttributeError):
+    ELASTICSEARCH_CLOUD_ID = None
+    ELASTICSEARCH_USERNAME = None
+    ELASTICSEARCH_PASSWORD = None
 
 def ensure_list(value, default=None):
     """确保值是列表格式，如果是字符串则分割"""
@@ -51,7 +64,11 @@ def log_case_activity(activity_type, case_id=None, case_title=None, details=None
     )
 
 def search_cases(query="", difficulty=None):
-    """搜索病例"""
+    """搜索病例（仅本地开发可用，云端返回None）"""
+    # 云端部署时跳过Elasticsearch
+    if not HAS_ELASTICSEARCH or not ELASTICSEARCH_CLOUD_ID:
+        return None
+    
     try:
         es = Elasticsearch(
             cloud_id=ELASTICSEARCH_CLOUD_ID,

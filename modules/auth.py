@@ -5,8 +5,21 @@
 
 import streamlit as st
 from datetime import datetime
-from neo4j import GraphDatabase
-from config.settings import *
+
+# 可选导入Neo4j（仅本地开发需要）
+try:
+    from neo4j import GraphDatabase
+    HAS_NEO4J = True
+except ImportError:
+    HAS_NEO4J = False
+    GraphDatabase = None
+
+try:
+    from config.settings import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD
+except (ImportError, AttributeError):
+    NEO4J_URI = None
+    NEO4J_USERNAME = None
+    NEO4J_PASSWORD = None
 
 # 教师密码
 TEACHER_PASSWORD = "admin888"
@@ -17,6 +30,10 @@ _cached_driver = None
 def get_neo4j_driver():
     """获取Neo4j连接（使用缓存避免重复连接）"""
     global _cached_driver
+    
+    # 云端部署时跳过Neo4j
+    if not HAS_NEO4J or not NEO4J_URI:
+        return None
     
     # 如果已有缓存的driver，直接返回
     if _cached_driver is not None:
@@ -44,7 +61,7 @@ def get_neo4j_driver():
         return _cached_driver
     except Exception as e:
         print(f"Neo4j连接创建失败: {e}")
-        raise
+        return None
 
 # 全局变量：标记Neo4j是否可用
 _neo4j_available = None
