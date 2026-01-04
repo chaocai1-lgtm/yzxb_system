@@ -47,22 +47,39 @@ st.markdown("""
     }
     
     /* 禁用所有过渡动画减少闪烁 */
-    * {
+    *, *::before, *::after {
         transition: none !important;
         animation: none !important;
         animation-duration: 0s !important;
+        animation-delay: 0s !important;
     }
     
     /* 禁止边框闪烁 */
     .stMetric, .stDataFrame, div[data-testid="stMetricValue"],
-    div[data-testid="stDataFrame"], .stPlotlyChart {
+    div[data-testid="stDataFrame"], .stPlotlyChart,
+    .element-container, div[class*="st"], 
+    div[data-testid*="st"] {
         animation: none !important;
         border: none !important;
         outline: none !important;
+        transition: none !important;
+    }
+    
+    /* 强制禁用数据框和表格的所有动画 */
+    table, thead, tbody, tr, td, th {
+        animation: none !important;
+        transition: none !important;
     }
     
     /* 禁止图表容器边框动画 */
     .js-plotly-plot, .plotly, .plot-container {
+        animation: none !important;
+        transition: none !important;
+    }
+    
+    /* 禁用Streamlit内部组件的focus效果 */
+    *:focus, *:active, *:hover {
+        outline: none !important;
         animation: none !important;
         transition: none !important;
     }
