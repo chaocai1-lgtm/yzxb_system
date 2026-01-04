@@ -272,12 +272,13 @@ st.markdown("""
         color: white !important;
         border: none;
         border-radius: 12px;
-        padding: 12px 25px;
+        padding: 10px 20px;
         font-weight: 600;
         transition: all 0.3s ease;
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         width: 100%;
-        font-size: 14px;
+        font-size: 12px;
+        white-space: nowrap;
     }
     
     .stButton>button:hover {
@@ -733,19 +734,20 @@ def render_teacher_dashboard():
     
     # 获取真实数据
     has_neo4j = check_neo4j_available()
-    if has_neo4j:
-        summary = get_activity_summary()
-        all_students = get_all_students()
-        
-        # 计算增长（简单示例，可以改进为与昨天/上周对比）
-        total_students = summary['total_students']
-        today_active = summary['today_activities']
-        active_7d = summary['active_students']
-    else:
-        st.warning("⚠️ Neo4j数据库未连接，显示为空数据。请在本地部署时连接数据库查看真实数据。")
-        total_students = 0
-        today_active = 0
-        active_7d = 0
+    
+    # 获取数据
+    summary = get_activity_summary()
+    all_students = get_all_students() if has_neo4j else []
+    
+    # 计算统计数据
+    total_students = summary.get('total_students', 0)
+    today_active = summary.get('today_activities', 0)
+    active_7d = summary.get('active_students', 0)
+    total_acts = summary.get('total_activities', 0)
+    
+    # 只在真正无数据时提示（避免本地开发时误报）
+    if total_students == 0 and not has_neo4j:
+        st.info("💡 提示：当前无学生数据。学生登录使用后即可在此查看学习统计。")
     
     # 核心数据指标 - 使用真实数据
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -762,7 +764,6 @@ def render_teacher_dashboard():
         else:
             st.metric("✅ 7日活跃率", "0%")
     with col5:
-        total_acts = summary['total_activities'] if has_neo4j else 0
         st.metric("📝 总学习记录", str(total_acts))
     
     st.markdown("<br>", unsafe_allow_html=True)
