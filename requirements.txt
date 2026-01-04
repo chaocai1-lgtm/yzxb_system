@@ -7,6 +7,8 @@ plotly==5.18.0
 pyvis==0.3.2
 streamlit-autorefresh==0.0.1
 
-# 可选依赖（仅本地开发需要）
-# neo4j==5.14.0
+# Neo4j 数据库驱动（必需）
+neo4j==5.14.0
+
+# 可选依赖
 # elasticsearch==8.11.0
