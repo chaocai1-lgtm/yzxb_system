@@ -729,7 +729,7 @@ def render_teacher_dashboard():
     import pandas as pd
     import plotly.express as px
     from modules.analytics import get_activity_summary, get_daily_activity_trend
-    from modules.auth import check_neo4j_available, get_all_students
+    from modules.auth import check_neo4j_available, get_all_students, get_all_modules_statistics, get_single_module_statistics
     
     st.markdown("""
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
