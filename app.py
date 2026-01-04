@@ -613,26 +613,134 @@ def main():
     # 根据当前页面渲染内容
     current = st.session_state.current_page
     
-    if current == 'home':
-        render_home_page(user)
-    elif current == 'case_library':
-        render_case_library()
-    elif current == 'knowledge_graph':
-        render_knowledge_graph()
-    elif current == 'ability_recommender':
-        render_ability_recommender()
-    elif current == 'classroom':
-        render_classroom_interaction()
-    elif current == 'case_analytics':
-        render_module_analytics("病例库")
-    elif current == 'graph_analytics':
-        render_module_analytics("知识图谱")
-    elif current == 'ability_analytics':
-        render_module_analytics("能力推荐")
-    elif current == 'interaction_analytics':
-        render_module_analytics("课中互动")
-    elif current == 'system_settings':
-        render_system_settings()
+    # 教师端和学生端分开处理
+    if user['role'] == 'teacher':
+        # 教师端直接显示数据概览
+        if current == 'home':
+            render_teacher_dashboard()
+        elif current == 'case_analytics':
+            render_module_analytics("病例库")
+        elif current == 'graph_analytics':
+            render_module_analytics("知识图谱")
+        elif current == 'ability_analytics':
+            render_module_analytics("能力推荐")
+        elif current == 'interaction_analytics':
+            render_module_analytics("课中互动")
+        elif current == 'system_settings':
+            render_system_settings()
+        else:
+            render_teacher_dashboard()
+    else:
+        # 学生端
+        if current == 'home':
+            render_home_page(user)
+        elif current == 'case_library':
+            render_case_library()
+        elif current == 'knowledge_graph':
+            render_knowledge_graph()
+        elif current == 'ability_recommender':
+            render_ability_recommender()
+        elif current == 'classroom':
+            render_classroom_interaction()
+        else:
+            render_home_page(user)
+
+def render_teacher_dashboard():
+    """渲染教师端数据概览首页"""
+    import pandas as pd
+    import plotly.express as px
+    import random
+    
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                padding: 30px; border-radius: 16px; margin-bottom: 30px;">
+        <h2 style="margin: 0; color: white;">📊 教学数据概览</h2>
+        <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9);">
+            实时查看学生学习情况，掌握教学效果
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 核心数据指标
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        st.metric("👥 学生总数", "156", "+12")
+    with col2:
+        st.metric("📚 今日活跃", "89", "+15%")
+    with col3:
+        st.metric("⏱️ 平均学习时长", "45分钟", "+8%")
+    with col4:
+        st.metric("✅ 平均完成率", "78%", "+5%")
+    with col5:
+        st.metric("🎯 平均正确率", "85%", "+3%")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 四个模块数据概览
+    st.markdown("### 📈 各模块学习数据")
+    
+    modules = ["病例库", "知识图谱", "能力推荐", "课中互动"]
+    module_cols = st.columns(4)
+    
+    for i, module in enumerate(modules):
+        with module_cols[i]:
+            st.markdown(f"""
+            <div style="background: #fff; border-radius: 12px; padding: 20px; 
+                        border: 1px solid rgba(102,126,234,0.2); text-align: center;">
+                <h4 style="color: #667eea; margin-bottom: 15px;">{module}</h4>
+                <div style="font-size: 24px; font-weight: 600; color: #333;">{random.randint(60, 120)}</div>
+                <div style="color: #888; font-size: 13px;">学习人次</div>
+                <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
+                <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                    <span>完成率</span>
+                    <span style="color: #667eea; font-weight: 600;">{random.randint(65, 95)}%</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 图表区域
+    chart_col1, chart_col2 = st.columns(2)
+    
+    with chart_col1:
+        st.markdown("### 📊 近7天学习趋势")
+        dates = [f"01-0{i}" for i in range(1, 8)]
+        df = pd.DataFrame({
+            "日期": dates,
+            "学习人数": [random.randint(50, 100) for _ in range(7)],
+            "完成人数": [random.randint(30, 70) for _ in range(7)]
+        })
+        fig = px.line(df, x="日期", y=["学习人数", "完成人数"], markers=True)
+        fig.update_layout(height=300, margin=dict(l=20, r=20, t=30, b=20), legend=dict(orientation="h"))
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with chart_col2:
+        st.markdown("### 🥧 学习进度分布")
+        progress_df = pd.DataFrame({
+            "状态": ["未开始", "进行中", "已完成"],
+            "人数": [25, 56, 75]
+        })
+        fig = px.pie(progress_df, values="人数", names="状态", 
+                    color_discrete_sequence=['#e8eaf6', '#667eea', '#764ba2'])
+        fig.update_layout(height=300, margin=dict(l=20, r=20, t=30, b=20))
+        st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 学生排行榜
+    st.markdown("### 🏆 学习排行榜 (Top 10)")
+    leaderboard = []
+    names = ["张三", "李四", "王五", "赵六", "钱七", "孙八", "周九", "吴十", "郑九", "王十"]
+    for i, name in enumerate(names):
+        leaderboard.append({
+            "排名": "🥇" if i == 0 else ("🥈" if i == 1 else ("🥉" if i == 2 else str(i+1))),
+            "学生": name,
+            "学习时长(分)": 300 - i * 20,
+            "完成任务": 15 - i,
+            "正确率": f"{95 - i * 3}%"
+        })
+    st.dataframe(pd.DataFrame(leaderboard), use_container_width=True, hide_index=True)
 
 def render_home_page(user):
     """渲染首页"""
