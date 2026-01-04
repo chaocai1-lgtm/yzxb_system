@@ -729,7 +729,7 @@ def render_teacher_dashboard():
     import pandas as pd
     import plotly.express as px
     from modules.analytics import get_activity_summary, get_daily_activity_trend
-    from modules.auth import check_neo4j_available, get_all_students, get_all_modules_statistics, get_single_module_statistics
+    from modules.auth import check_neo4j_available, get_all_students, get_all_modules_statistics, get_single_module_statistics, get_neo4j_driver, get_neo4j_driver
     
     st.markdown("""
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -1206,38 +1206,83 @@ def render_module_analytics(module_name):
         
         with col_chart1:
             st.markdown("##### 📈 近7天学习人数趋势")
-            dates = [f"01-{i:02d}" for i in range(1, 8)]
-            counts = [random.randint(20, 50) for _ in range(7)]
-            df = pd.DataFrame({"日期": dates, "学习人数": counts})
-            fig = px.line(df, x="日期", y="学习人数", markers=True)
-            fig.update_traces(line_color='#667eea')
-            fig.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20))
-            st.plotly_chart(fig, use_container_width=True)
+            if has_neo4j:
+                try:
+                    from modules.analytics import get_daily_activity_trend
+                    trend_data = get_daily_activity_trend(7)
+                    if trend_data:
+                        df = pd.DataFrame(trend_data)
+                        # 确保日期是字符串格式（已在函数中转换）
+                        fig = px.line(df, x="date", y="count", markers=True)
+                        fig.update_traces(line_color='#667eea')
+                        fig.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20), xaxis_title="日期", yaxis_title="活动数")
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.info("暂无近7天数据")
+                except Exception as e:
+                    st.error(f"加载趋势数据失败: {e}")
+            else:
+                st.info("需要连接数据库查看趋势")
         
         with col_chart2:
-            st.markdown("##### 🥧 学习进度分布")
-            progress_data = pd.DataFrame({
-                "进度": ["未开始", "进行中", "已完成"],
-                "人数": [random.randint(10, 30), random.randint(40, 80), random.randint(50, 100)]
-            })
-            fig = px.pie(progress_data, values="人数", names="进度", 
-                        color_discrete_sequence=['#e8eaf6', '#667eea', '#764ba2'])
-            fig.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20))
-            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("##### 🥧 学习模块分布")
+            if has_neo4j:
+                try:
+                    # 获取模块统计
+                    all_module_stats = get_all_modules_statistics()
+                    if all_module_stats:
+                        module_data = []
+                        for module_name, stats in all_module_stats.items():
+                            module_data.append({
+                                "模块": module_name,
+                                "访问次数": stats.get('total_visits', 0)
+                            })
+                        if module_data:
+                            df = pd.DataFrame(module_data)
+                            fig = px.pie(df, values="访问次数", names="模块",
+                                        color_discrete_sequence=['#667eea', '#764ba2', '#f093fb', '#4facfe'])
+                            fig.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20))
+                            st.plotly_chart(fig, use_container_width=True)
+                        else:
+                            st.info("暂无模块访问数据")
+                    else:
+                        st.info("暂无模块访问数据")
+                except Exception as e:
+                    st.error(f"加载模块数据失败: {e}")
+            else:
+                st.info("需要连接数据库查看分布")
         
         # 学生排行榜
         st.markdown("##### 🏆 学习排行榜 (Top 10)")
-        leaderboard = []
-        names = ["张三", "李四", "王五", "赵六", "钱七", "孙八", "周九", "吴十", "郑九", "王十"]
-        for i, name in enumerate(names):
-            leaderboard.append({
-                "排名": f"🥇" if i == 0 else (f"🥈" if i == 1 else (f"🥉" if i == 2 else f"{i+1}")),
-                "学生": name,
-                "学习时长(分)": random.randint(100, 300) - i * 15,
-                "完成进度": f"{95 - i * 5}%",
-                "正确率": f"{92 - i * 3}%"
-            })
-        st.dataframe(pd.DataFrame(leaderboard), use_container_width=True, hide_index=True)
+        if has_neo4j:
+            try:
+                driver = get_neo4j_driver()
+                with driver.session() as session:
+                    result = session.run("""
+                        MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
+                        WHERE a.module = $module_name
+                        RETURN s.student_id as student_id, 
+                               count(a) as activity_count
+                        ORDER BY activity_count DESC
+                        LIMIT 10
+                    """, module_name=module_name)
+                    
+                    leaderboard = []
+                    for i, record in enumerate(result):
+                        leaderboard.append({
+                            "排名": "🥇" if i == 0 else ("🥈" if i == 1 else ("🥉" if i == 2 else str(i+1))),
+                            "学号": record['student_id'],
+                            "学习记录数": record['activity_count']
+                        })
+                    
+                    if leaderboard:
+                        st.dataframe(pd.DataFrame(leaderboard), use_container_width=True, hide_index=True)
+                    else:
+                        st.info(f"暂无{module_name}学习数据")
+            except Exception as e:
+                st.error(f"获取排行榜失败: {e}")
+        else:
+            st.info("需要连接数据库查看排行榜")
 
 def render_system_settings():
     """渲染系统设置页面（仅教师可用）"""
