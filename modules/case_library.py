@@ -120,7 +120,7 @@ def get_case_detail(case_id):
     except Exception:
         return None
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=60, show_spinner=False)  # 临时改为60秒方便测试
 def get_all_sample_cases():
     """获取所有病例数据（带缓存）"""
     # 先尝试从Elasticsearch获取
@@ -625,7 +625,7 @@ def render_case_library():
                 """, unsafe_allow_html=True)
             
             with col2:
-                st.markdown("#### 🔍 主要临床表现")
+                st.markdown("#### 🔍 主要症状")
                 symptoms = selected_case['symptoms']
                 if isinstance(symptoms, list):
                     for s in symptoms:
@@ -636,6 +636,24 @@ def render_case_library():
                         """, unsafe_allow_html=True)
                 else:
                     st.markdown(symptoms)
+            
+            # 临床表现（新增）
+            if 'clinical_manifestation' in selected_case:
+                st.markdown("#### 🔬 临床表现")
+                st.markdown(f"""
+                <div style="background: #f3e5f5; padding: 15px; border-radius: 8px; border-left: 4px solid #9c27b0; white-space: pre-line;">
+                {selected_case['clinical_manifestation']}
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # 辅助检查（新增）
+            if 'auxiliary_examination' in selected_case:
+                st.markdown("#### 🩻 辅助检查")
+                st.markdown(f"""
+                <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; border-left: 4px solid #4caf50; white-space: pre-line;">
+                {selected_case['auxiliary_examination']}
+                </div>
+                """, unsafe_allow_html=True)
         
         with tab2:
             st.markdown("#### 🏥 临床诊断")
@@ -737,17 +755,13 @@ def render_case_library():
                     </div>
                     """, unsafe_allow_html=True)
             
-            # 治疗注意事项
-            st.markdown("#### ⚠️ 治疗注意事项")
-            key_points = ensure_list(
-                selected_case.get('key_points'),
-                ['注意病史采集', '仔细临床检查']
-            )
-            for point in key_points:
+            # 治疗注意事项（新增字段）
+            if 'treatment_notes' in selected_case:
+                st.markdown("#### ⚠️ 治疗注意事项")
                 st.markdown(f"""
-                <div style="background: #fff8e1; padding: 10px 15px; margin: 5px 0; 
-                            border-radius: 8px; border-left: 4px solid #ffc107;">
-                    {point}
+                <div style="background: #fff8e1; padding: 15px; margin: 10px 0; 
+                            border-radius: 8px; border-left: 4px solid #ffc107; white-space: pre-line;">
+                    {selected_case['treatment_notes']}
                 </div>
                 """, unsafe_allow_html=True)
         
