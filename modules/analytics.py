@@ -85,10 +85,17 @@ def get_daily_activity_trend(days=7):
                 ORDER BY date
             """, days=str(days))
             
-            trend = [dict(record) for record in result]
+            # 将Date对象转换为字符串
+            trend = []
+            for record in result:
+                trend.append({
+                    'date': str(record['date']) if record['date'] else None,
+                    'count': record['count']
+                })
         
         return trend
-    except Exception:
+    except Exception as e:
+        print(f"获取每日趋势失败: {e}")
         return []
 
 def get_module_usage():
@@ -194,7 +201,14 @@ def get_student_learning_profile(student_id):
                 LIMIT 20
             """, student_id=student_id)
             
-            recent_content = [dict(record) for record in result]
+            # 将timestamp转换为字符串
+            recent_content = []
+            for record in result:
+                recent_content.append({
+                    'module': record['module'],
+                    'content': record['content'],
+                    'time': str(record['time']) if record['time'] else None
+                })
         
         return {
             'info': student_info,
