@@ -139,12 +139,10 @@ def get_all_students():
             result = session.run("""
                 MATCH (s:yzbx_Student)
                 OPTIONAL MATCH (s)-[:PERFORMED]->(a:yzbx_Activity)
+                WITH s, count(a) as activity_count
                 RETURN s.student_id as student_id, 
-                       s.name as name,
-                       s.last_login as last_login,
-                       s.login_count as login_count,
-                       count(a) as activity_count
-                ORDER BY s.last_login DESC
+                       activity_count
+                ORDER BY activity_count DESC
             """)
             
             students = [dict(record) for record in result]

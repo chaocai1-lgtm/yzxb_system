@@ -1063,7 +1063,7 @@ def render_module_analytics(module_name):
             st.info("💡 当前暂无学生数据。学生注册登录后，数据会自动显示在此处。")
             # 不要return，让tab2可以继续显示
         else:
-            student_options = {f"{s['student_id']} - {s.get('name', '未设置姓名')}": s['student_id'] 
+            student_options = {f"学生 {s['student_id']} (活动数: {s.get('activity_count', 0)})": s['student_id'] 
                               for s in all_students}
             
             selected_display = st.selectbox("选择学生", list(student_options.keys()), key=f"select_{module_name}")
@@ -1073,11 +1073,21 @@ def render_module_analytics(module_name):
                 # 获取该学生在该模块的活动记录
                 activities = get_student_activities(selected_student_id, module_name)
             
-                st.markdown(f"#### {selected_display.split(' - ')[1]} 的{module_name}学习数据")
+                st.markdown(f"#### 学生 {selected_student_id} 的{module_name}学习数据")
                 
                 # 统计数据
                 total_activities = len(activities)
-                unique_days = len(set(a['date'] for a in activities)) if activities else 0
+                # 从timestamp提取日期
+                unique_dates = set()
+                for a in activities:
+                    if 'timestamp' in a and a['timestamp']:
+                        try:
+                            # timestamp格式: "2025-01-01 10:30:00"
+                            date_str = str(a['timestamp']).split(' ')[0]
+                            unique_dates.add(date_str)
+                        except:
+                            pass
+                unique_days = len(unique_dates)
                 
                 col1, col2, col3 = st.columns(3)
                 with col1:
