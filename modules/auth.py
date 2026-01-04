@@ -393,7 +393,10 @@ def render_login_page():
                     student_id = student_input
                     student_name = student_input
                     
-                    # 保存到session（不连接数据库，直接登录）
+                    # 在Neo4j中注册学生（如果可用）
+                    register_student(student_id, student_name)
+                    
+                    # 保存到session
                     st.session_state['logged_in'] = True
                     st.session_state['user_role'] = 'student'
                     st.session_state['student_id'] = student_id
