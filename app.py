@@ -1554,6 +1554,10 @@ def render_data_management():
             except Exception as e:
                 st.error(f"调试查询失败: {e}")
         
+        # 初始化 session_state（必须在使用之前）
+        if 'selected_export_module' not in st.session_state:
+            st.session_state.selected_export_module = None
+        
         module_col1, module_col2, module_col3, module_col4 = st.columns(4)
         
         modules = ["病例库", "知识图谱", "能力推荐", "课中互动"]
@@ -1564,10 +1568,6 @@ def render_data_management():
                 if st.button(f"📥 {module}", key=f"export_btn_{module}", use_container_width=True):
                     selected_module = module
                     st.session_state.selected_export_module = module
-        
-        # 使用 session_state 保持选择状态
-        if 'selected_export_module' not in st.session_state:
-            st.session_state.selected_export_module = None
         
         display_module = selected_module or st.session_state.selected_export_module
         
