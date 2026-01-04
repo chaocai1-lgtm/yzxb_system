@@ -13,13 +13,18 @@ TEACHER_PASSWORD = "admin888"
 
 def get_neo4j_driver():
     """获取Neo4j连接"""
-    # neo4j+ssc协议已包含SSL设置，不需要额外参数
-    return GraphDatabase.driver(
-        NEO4J_URI, 
-        auth=(NEO4J_USERNAME, NEO4J_PASSWORD),
-        max_connection_lifetime=30,
-        connection_timeout=10
-    )
+    # neo4j+ssc协议已经处理SSL和自签名证书信任
+    # 不需要额外的encrypted参数，URI协议已指定
+    try:
+        return GraphDatabase.driver(
+            NEO4J_URI, 
+            auth=(NEO4J_USERNAME, NEO4J_PASSWORD),
+            max_connection_lifetime=30,
+            connection_timeout=15
+        )
+    except Exception as e:
+        print(f"Neo4j连接创建失败: {e}")
+        raise
 
 # 全局变量：标记Neo4j是否可用
 _neo4j_available = None
@@ -341,7 +346,12 @@ def get_current_user():
     return None
 
 def logout():
-    """登出"""
-    for key in ['logged_in', 'user_role', 'student_id', 'student_name', 'teacher_name']:
-        if key in st.session_state:
-            del st.session_state[key]
+    """登出 - 清除所有session状态"""
+    # 清除所有session_state，确保完全登出
+    keys_to_clear = list(st.session_state.keys())
+    for key in keys_to_clear:
+        del st.session_state[key]
+    
+    # 重置Neo4j可用性检查
+    global _neo4j_available
+    _neo4j_available = None

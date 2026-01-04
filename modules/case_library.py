@@ -8,6 +8,17 @@ from elasticsearch import Elasticsearch
 from neo4j import GraphDatabase
 from config.settings import *
 
+def ensure_list(value, default=None):
+    """确保值是列表格式，如果是字符串则分割"""
+    if default is None:
+        default = []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        # 如果是字符串，按换行符分割
+        return [line.strip() for line in value.split('\n') if line.strip()]
+    return default
+
 def check_neo4j_available():
     """检查Neo4j是否可用"""
     from modules.auth import check_neo4j_available as auth_check
@@ -698,7 +709,10 @@ def render_case_library():
             else:
                 # 如果没有详细分析，显示简要诊断要点
                 st.markdown("#### 💡 诊断要点")
-                key_points = selected_case.get('key_points', ['注意病史采集', '仔细临床检查', '辅助检查分析'])
+                key_points = ensure_list(
+                    selected_case.get('key_points'),
+                    ['注意病史采集', '仔细临床检查', '辅助检查分析']
+                )
                 for i, point in enumerate(key_points, 1):
                     st.markdown(f"""
                     <div style="background: #e7f3ff; padding: 10px; margin: 5px 0; border-radius: 5px; border-left: 3px solid #0066cc;">
@@ -708,7 +722,10 @@ def render_case_library():
         
         with tab3:
             st.markdown("#### 💊 治疗计划")
-            treatment = selected_case.get('treatment_plan', ['口腔卫生指导', '基础治疗', '定期复查'])
+            treatment = ensure_list(
+                selected_case.get('treatment_plan'), 
+                ['口腔卫生指导', '基础治疗', '定期复查']
+            )
             
             current_phase = None
             step_count = 0
@@ -734,7 +751,10 @@ def render_case_library():
             
             # 治疗注意事项
             st.markdown("#### ⚠️ 治疗注意事项")
-            key_points = selected_case.get('key_points', ['注意病史采集', '仔细临床检查'])
+            key_points = ensure_list(
+                selected_case.get('key_points'),
+                ['注意病史采集', '仔细临床检查']
+            )
             for point in key_points:
                 st.markdown(f"""
                 <div style="background: #fff8e1; padding: 10px 15px; margin: 5px 0; 
@@ -747,7 +767,10 @@ def render_case_library():
             st.markdown("#### 📝 学习要点总结")
             
             # 显示关键学习要点
-            key_points = selected_case.get('key_points', ['注意病史采集', '仔细临床检查', '辅助检查分析'])
+            key_points = ensure_list(
+                selected_case.get('key_points'),
+                ['注意病史采集', '仔细临床检查', '辅助检查分析']
+            )
             for i, point in enumerate(key_points, 1):
                 st.markdown(f"""
                 <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); 

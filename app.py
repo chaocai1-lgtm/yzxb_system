@@ -49,6 +49,21 @@ st.markdown("""
     * {
         transition: none !important;
         animation: none !important;
+        animation-duration: 0s !important;
+    }
+    
+    /* 禁止边框闪烁 */
+    .stMetric, .stDataFrame, div[data-testid="stMetricValue"],
+    div[data-testid="stDataFrame"], .stPlotlyChart {
+        animation: none !important;
+        border: none !important;
+        outline: none !important;
+    }
+    
+    /* 禁止图表容器边框动画 */
+    .js-plotly-plot, .plotly, .plot-container {
+        animation: none !important;
+        transition: none !important;
     }
     
     /* 隐藏Streamlit的状态指示器 */
