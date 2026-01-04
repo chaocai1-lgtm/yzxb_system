@@ -185,8 +185,8 @@ def log_activity(student_id, activity_type, module_name, content_id=None, conten
                 MERGE (s:yzbx_Student {student_id: $student_id})
                 CREATE (a:yzbx_Activity {
                     id: randomUUID(),
-                    type: $activity_type,
-                    module: $module_name,
+                    activity_type: $activity_type,
+                    module_name: $module_name,
                     content_id: $content_id,
                     content_name: $content_name,
                     details: $details,

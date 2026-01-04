@@ -1430,7 +1430,7 @@ def render_data_management():
         return
     
     # 创建选项卡
-    tab1, tab2, tab3 = st.tabs(["📥 数据导出", "👥 学生管理", "📝 活动记录管理"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📥 数据导出", "👥 学生管理", "📝 活动记录管理", "🔧 数据修复"])
     
     # ===== 数据导出 =====
     with tab1:
@@ -1770,6 +1770,92 @@ def render_data_management():
                         st.rerun()
                     except Exception as e:
                         st.error(f"清除失败: {e}")
+    
+    # ===== 数据修复 =====
+    with tab4:
+        st.markdown("### 🔧 数据修复工具")
+        st.warning("⚠️ 此工具用于修复历史数据中的字段不一致问题")
+        
+        st.markdown("#### 问题诊断")
+        
+        try:
+            driver = get_neo4j_driver()
+            with driver.session() as session:
+                # 检查 module 字段（旧字段名）
+                result1 = session.run("""
+                    MATCH (a:yzbx_Activity)
+                    WHERE EXISTS(a.module)
+                    RETURN count(a) as count
+                """)
+                old_field_count = result1.single()['count']
+                
+                # 检查 module_name 字段（新字段名）
+                result2 = session.run("""
+                    MATCH (a:yzbx_Activity)
+                    WHERE EXISTS(a.module_name) AND a.module_name IS NOT NULL
+                    RETURN count(a) as count
+                """)
+                new_field_count = result2.single()['count']
+                
+                # 检查 activity_type 字段
+                result3 = session.run("""
+                    MATCH (a:yzbx_Activity)
+                    WHERE EXISTS(a.activity_type)
+                    RETURN count(a) as count
+                """)
+                activity_type_count = result3.single()['count']
+                
+                # 检查 type 字段（旧字段名）
+                result4 = session.run("""
+                    MATCH (a:yzbx_Activity)
+                    WHERE EXISTS(a.type)
+                    RETURN count(a) as count
+                """)
+                old_type_count = result4.single()['count']
+                
+                st.write("**字段使用情况：**")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("使用旧字段 'module' 的记录", old_field_count)
+                    st.metric("使用新字段 'module_name' 的记录", new_field_count)
+                with col2:
+                    st.metric("使用旧字段 'type' 的记录", old_type_count)
+                    st.metric("使用新字段 'activity_type' 的记录", activity_type_count)
+                
+                if old_field_count > 0 or old_type_count > 0:
+                    st.error(f"⚠️ 发现 {old_field_count} 条使用旧字段名的记录，需要修复")
+                    
+                    if st.button("🔧 修复历史数据字段名", key="fix_fields", type="primary"):
+                        with st.spinner("正在修复数据..."):
+                            try:
+                                # 修复 module -> module_name
+                                session.run("""
+                                    MATCH (a:yzbx_Activity)
+                                    WHERE EXISTS(a.module)
+                                    SET a.module_name = a.module
+                                    REMOVE a.module
+                                """)
+                                
+                                # 修复 type -> activity_type
+                                session.run("""
+                                    MATCH (a:yzbx_Activity)
+                                    WHERE EXISTS(a.type)
+                                    SET a.activity_type = a.type
+                                    REMOVE a.type
+                                """)
+                                
+                                st.success("✅ 字段名修复完成！")
+                                st.info("💡 页面将在3秒后刷新...")
+                                import time
+                                time.sleep(3)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"修复失败: {e}")
+                else:
+                    st.success("✅ 所有数据字段名正确，无需修复")
+                    
+        except Exception as e:
+            st.error(f"诊断失败: {e}")
 
 def render_system_settings():
     """渲染系统设置页面（仅教师可用）"""
