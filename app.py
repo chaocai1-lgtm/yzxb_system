@@ -600,6 +600,14 @@ def main():
     # 获取当前用户
     user = get_current_user()
     
+    # 显示欢迎消息（仅刚登录时）
+    if st.session_state.get('just_logged_in', False):
+        if user['role'] == 'student':
+            st.success(f"🎓 欢迎，{user.get('name')}！")
+        else:
+            st.success(f"👨‍🏫 教师登录成功！")
+        st.session_state['just_logged_in'] = False  # 清除标记
+    
     # 顶部导航栏
     st.markdown(f"""
     <div class="top-nav">

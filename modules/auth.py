@@ -356,8 +356,9 @@ def render_login_page():
                     st.session_state['user_role'] = 'student'
                     st.session_state['student_id'] = student_id
                     st.session_state['student_name'] = student_name
+                    st.session_state['just_logged_in'] = True  # 标记刚刚登录
                     
-                    st.success(f"欢迎，{student_name}！")
+                    # 直接重新运行，不显示消息
                     st.rerun()
                 else:
                     st.error("请输入学号或姓名")
@@ -371,8 +372,9 @@ def render_login_page():
                     st.session_state['logged_in'] = True
                     st.session_state['user_role'] = 'teacher'
                     st.session_state['teacher_name'] = "教师"
+                    st.session_state['just_logged_in'] = True  # 标记刚刚登录
                     
-                    st.success("教师登录成功！")
+                    # 直接重新运行，不显示消息
                     st.rerun()
                 else:
                     st.error("密码错误")
