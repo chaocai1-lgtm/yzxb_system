@@ -17,6 +17,15 @@ except ImportError:
 # Neo4j 配置 - 延迟加载
 _neo4j_config = None
 
+def _is_streamlit_ready():
+    """检查 Streamlit 是否已经初始化完成"""
+    try:
+        # 尝试访问 session_state 来检测 Streamlit 是否准备好
+        _ = st.session_state
+        return True
+    except Exception:
+        return False
+
 def _get_neo4j_config():
     """延迟加载 Neo4j 配置（避免在模块导入时访问 st.secrets）"""
     global _neo4j_config
@@ -29,6 +38,10 @@ def _get_neo4j_config():
     
     def _get_secret(possible_keys):
         """尝试多个可能的 key 名称获取 secret"""
+        # 先检查 Streamlit 是否准备好
+        if not _is_streamlit_ready():
+            return None
+            
         for key in possible_keys:
             try:
                 val = st.secrets.get(key)
@@ -39,10 +52,11 @@ def _get_neo4j_config():
         return None
     
     try:
-        # 尝试从 st.secrets 读取
-        uri = _get_secret(["NEO4J_URI", "neo4j_uri", "NEO4J_URL", "neo4j_url"])
-        username = _get_secret(["NEO4J_USERNAME", "neo4j_username", "NEO4J_USER", "neo4j_user", "username"])
-        password = _get_secret(["NEO4J_PASSWORD", "neo4j_password", "password"])
+        # 只有当 Streamlit 准备好时才尝试从 st.secrets 读取
+        if _is_streamlit_ready():
+            uri = _get_secret(["NEO4J_URI", "neo4j_uri", "NEO4J_URL", "neo4j_url"])
+            username = _get_secret(["NEO4J_USERNAME", "neo4j_username", "NEO4J_USER", "neo4j_user", "username"])
+            password = _get_secret(["NEO4J_PASSWORD", "neo4j_password", "password"])
     except Exception as e:
         print(f"[配置加载] st.secrets 读取失败: {e}")
     
@@ -65,6 +79,8 @@ def _get_neo4j_config():
 
 def get_all_secret_keys():
     """获取所有可用的 secrets keys（用于调试）"""
+    if not _is_streamlit_ready():
+        return []
     try:
         return list(st.secrets.keys()) if hasattr(st.secrets, 'keys') else []
     except:
@@ -133,6 +149,11 @@ _neo4j_error = None
 def check_neo4j_available():
     """检查Neo4j是否可用"""
     global _neo4j_available, _neo4j_error
+    
+    # 如果 Streamlit 还没准备好，返回 None（不缓存结果）
+    if not _is_streamlit_ready():
+        return False
+    
     if _neo4j_available is not None:
         return _neo4j_available
     try:
