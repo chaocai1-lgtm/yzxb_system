@@ -1784,7 +1784,7 @@ def render_data_management():
                 # 检查 module 字段（旧字段名）
                 result1 = session.run("""
                     MATCH (a:yzbx_Activity)
-                    WHERE EXISTS(a.module)
+                    WHERE a.module IS NOT NULL
                     RETURN count(a) as count
                 """)
                 old_field_count = result1.single()['count']
@@ -1792,7 +1792,7 @@ def render_data_management():
                 # 检查 module_name 字段（新字段名）
                 result2 = session.run("""
                     MATCH (a:yzbx_Activity)
-                    WHERE EXISTS(a.module_name) AND a.module_name IS NOT NULL
+                    WHERE a.module_name IS NOT NULL
                     RETURN count(a) as count
                 """)
                 new_field_count = result2.single()['count']
@@ -1800,7 +1800,7 @@ def render_data_management():
                 # 检查 activity_type 字段
                 result3 = session.run("""
                     MATCH (a:yzbx_Activity)
-                    WHERE EXISTS(a.activity_type)
+                    WHERE a.activity_type IS NOT NULL
                     RETURN count(a) as count
                 """)
                 activity_type_count = result3.single()['count']
@@ -1808,7 +1808,7 @@ def render_data_management():
                 # 检查 type 字段（旧字段名）
                 result4 = session.run("""
                     MATCH (a:yzbx_Activity)
-                    WHERE EXISTS(a.type)
+                    WHERE a.type IS NOT NULL
                     RETURN count(a) as count
                 """)
                 old_type_count = result4.single()['count']
@@ -1831,7 +1831,7 @@ def render_data_management():
                                 # 修复 module -> module_name
                                 session.run("""
                                     MATCH (a:yzbx_Activity)
-                                    WHERE EXISTS(a.module)
+                                    WHERE a.module IS NOT NULL
                                     SET a.module_name = a.module
                                     REMOVE a.module
                                 """)
@@ -1839,7 +1839,7 @@ def render_data_management():
                                 # 修复 type -> activity_type
                                 session.run("""
                                     MATCH (a:yzbx_Activity)
-                                    WHERE EXISTS(a.type)
+                                    WHERE a.type IS NOT NULL
                                     SET a.activity_type = a.type
                                     REMOVE a.type
                                 """)
