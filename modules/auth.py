@@ -14,53 +14,54 @@ except ImportError:
     HAS_NEO4J = False
     GraphDatabase = None
 
-# 优先从 st.secrets 读取配置（Streamlit Cloud），否则从 config.settings 读取（本地）
-NEO4J_URI = None
-NEO4J_USERNAME = None
-NEO4J_PASSWORD = None
+# Neo4j 配置 - 延迟加载
+_neo4j_config = None
 
-def _get_secret(possible_keys):
-    """尝试多个可能的 key 名称获取 secret"""
-    for key in possible_keys:
-        try:
-            val = st.secrets.get(key)
-            if val:
-                return val
-        except:
-            pass
-    return None
-
-try:
-    # 尝试多种可能的 key 名称
-    NEO4J_URI = _get_secret(["NEO4J_URI", "neo4j_uri", "NEO4J_URL", "neo4j_url"])
-    NEO4J_USERNAME = _get_secret(["NEO4J_USERNAME", "neo4j_username", "NEO4J_USER", "neo4j_user", "username"])
-    NEO4J_PASSWORD = _get_secret(["NEO4J_PASSWORD", "neo4j_password", "password"])
+def _get_neo4j_config():
+    """延迟加载 Neo4j 配置（避免在模块导入时访问 st.secrets）"""
+    global _neo4j_config
+    if _neo4j_config is not None:
+        return _neo4j_config
     
-    # 调试信息
-    print(f"[配置加载] 从 st.secrets 读取:")
-    print(f"  - URI: {'已设置' if NEO4J_URI else '未设置'}")
-    print(f"  - USERNAME: {'已设置' if NEO4J_USERNAME else '未设置'}")
-    print(f"  - PASSWORD: {'已设置' if NEO4J_PASSWORD else '未设置'}")
+    uri = None
+    username = None
+    password = None
+    
+    def _get_secret(possible_keys):
+        """尝试多个可能的 key 名称获取 secret"""
+        for key in possible_keys:
+            try:
+                val = st.secrets.get(key)
+                if val:
+                    return val
+            except:
+                pass
+        return None
+    
+    try:
+        # 尝试从 st.secrets 读取
+        uri = _get_secret(["NEO4J_URI", "neo4j_uri", "NEO4J_URL", "neo4j_url"])
+        username = _get_secret(["NEO4J_USERNAME", "neo4j_username", "NEO4J_USER", "neo4j_user", "username"])
+        password = _get_secret(["NEO4J_PASSWORD", "neo4j_password", "password"])
+    except Exception as e:
+        print(f"[配置加载] st.secrets 读取失败: {e}")
     
     # 如果 st.secrets 未设置完整，尝试从 config.settings 读取
-    if not all([NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD]):
-        print("[配置加载] st.secrets 配置不完整，尝试从 config.settings 读取")
+    if not all([uri, username, password]):
         try:
             from config.settings import NEO4J_URI as cfg_uri, NEO4J_USERNAME as cfg_user, NEO4J_PASSWORD as cfg_pwd
-            NEO4J_URI = NEO4J_URI or cfg_uri
-            NEO4J_USERNAME = NEO4J_USERNAME or cfg_user
-            NEO4J_PASSWORD = NEO4J_PASSWORD or cfg_pwd
-            print(f"[配置加载] 从 config.settings 补充完成")
+            uri = uri or cfg_uri
+            username = username or cfg_user
+            password = password or cfg_pwd
         except (ImportError, AttributeError) as e:
             print(f"[配置加载] config.settings 读取失败: {e}")
-except Exception as e:
-    print(f"[配置加载] 读取配置异常: {e}")
-    try:
-        from config.settings import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD
-    except (ImportError, AttributeError):
-        NEO4J_URI = None
-        NEO4J_USERNAME = None
-        NEO4J_PASSWORD = None
+    
+    _neo4j_config = {
+        'uri': uri,
+        'username': username,
+        'password': password
+    }
+    return _neo4j_config
 
 def get_all_secret_keys():
     """获取所有可用的 secrets keys（用于调试）"""
@@ -81,8 +82,14 @@ def get_neo4j_driver():
     global _cached_driver, _driver_last_check
     import time
     
+    # 获取配置（延迟加载）
+    config = _get_neo4j_config()
+    neo4j_uri = config['uri']
+    neo4j_username = config['username']
+    neo4j_password = config['password']
+    
     # 云端部署时跳过Neo4j
-    if not HAS_NEO4J or not NEO4J_URI:
+    if not HAS_NEO4J or not neo4j_uri:
         return None
     
     current_time = time.time()
@@ -107,8 +114,8 @@ def get_neo4j_driver():
     # 创建新的driver
     try:
         _cached_driver = GraphDatabase.driver(
-            NEO4J_URI, 
-            auth=(NEO4J_USERNAME, NEO4J_PASSWORD),
+            neo4j_uri, 
+            auth=(neo4j_username, neo4j_password),
             max_connection_lifetime=300,  # 5分钟
             connection_timeout=10,
             max_connection_pool_size=10
