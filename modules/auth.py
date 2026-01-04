@@ -26,20 +26,27 @@ TEACHER_PASSWORD = "admin888"
 
 # 全局缓存的Neo4j驱动（避免重复创建连接）
 _cached_driver = None
+_driver_last_check = 0  # 上次检查时间戳
 
 def get_neo4j_driver():
     """获取Neo4j连接（使用缓存避免重复连接）"""
-    global _cached_driver
+    global _cached_driver, _driver_last_check
+    import time
     
     # 云端部署时跳过Neo4j
     if not HAS_NEO4J or not NEO4J_URI:
         return None
     
-    # 如果已有缓存的driver，直接返回
+    current_time = time.time()
+    
+    # 如果已有缓存的driver，且距离上次检查不超过60秒，直接返回
     if _cached_driver is not None:
+        if current_time - _driver_last_check < 60:
+            return _cached_driver
         try:
-            # 验证连接是否仍然有效
+            # 验证连接是否仍然有效（每60秒检查一次）
             _cached_driver.verify_connectivity()
+            _driver_last_check = current_time
             return _cached_driver
         except:
             # 连接失效，重新创建
@@ -58,6 +65,7 @@ def get_neo4j_driver():
             connection_timeout=10,
             max_connection_pool_size=10
         )
+        _driver_last_check = current_time
         return _cached_driver
     except Exception as e:
         print(f"Neo4j连接创建失败: {e}")
@@ -203,7 +211,6 @@ def get_student_activities(student_id=None, module=None, limit=100):
         print(f"获取学生活动失败: {e}")
         return []
 
-@st.cache_data(ttl=300, show_spinner=False)  # 缓存5分钟
 def get_module_statistics():
     """获取各模块使用统计"""
     if not check_neo4j_available():
@@ -213,22 +220,59 @@ def get_module_statistics():
         driver = get_neo4j_driver()
         
         with driver.session() as session:
-            # 简化查询，移除不必要的OPTIONAL MATCH
+            # 获取每个模块的详细统计
             result = session.run("""
                 MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
                 WITH a.module as module, 
                      count(a) as total_activities,
-                     count(DISTINCT s) as unique_students
-                RETURN module, total_activities, unique_students, 0 as today_count
+                     count(DISTINCT s) as unique_students,
+                     collect(DISTINCT s.student_id) as student_ids
+                OPTIONAL MATCH (a2:yzbx_Activity {module: module})
+                WHERE date(a2.timestamp) = date()
+                WITH module, total_activities, unique_students, student_ids, count(a2) as today_count
+                RETURN module, total_activities, unique_students, today_count
                 ORDER BY total_activities DESC
             """)
             
             stats = [dict(record) for record in result]
         
         return stats
-    except Exception as e:
-        print(f"获取模块统计失败: {e}")
+    except:
         return []
+
+@st.cache_data(ttl=300, show_spinner=False)  # 缓存5分钟
+def get_all_modules_statistics():
+    """一次性获取所有模块的统计数据（性能优化）"""
+    if not check_neo4j_available():
+        return {}
+    
+    try:
+        driver = get_neo4j_driver()
+        
+        with driver.session() as session:
+            result = session.run("""
+                MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
+                WITH a.module as module, count(a) as total_visits, count(DISTINCT s) as unique_students
+                RETURN module, total_visits, unique_students
+            """)
+            
+            stats_dict = {}
+            for record in result:
+                module = record['module']
+                total_visits = record['total_visits']
+                unique_students = record['unique_students']
+                avg_visits = round(total_visits / unique_students, 1) if unique_students > 0 else 0
+                stats_dict[module] = {
+                    'module': module,
+                    'total_visits': total_visits,
+                    'unique_students': unique_students,
+                    'avg_visits_per_student': avg_visits
+                }
+        
+        return stats_dict
+    except Exception as e:
+        print(f"获取所有模块统计失败: {e}")
+        return {}
 
 @st.cache_data(ttl=300, show_spinner=False)  # 缓存5分钟
 def get_single_module_statistics(module_name):
@@ -246,23 +290,29 @@ def get_single_module_statistics(module_name):
         driver = get_neo4j_driver()
         
         with driver.session() as session:
-            # 合并为一个查询
+            # 总访问次数和学生数
             result = session.run("""
                 MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity {module: $module})
-                OPTIONAL MATCH (recent:yzbx_Activity {module: $module})
-                WHERE recent.timestamp > datetime() - duration('P7D')
                 RETURN count(a) as total_activities,
-                       count(DISTINCT s) as unique_students,
-                       count(DISTINCT recent) as recent_count
+                       count(DISTINCT s) as unique_students
             """, module=module_name)
             
             record = result.single()
             total_activities = record['total_activities'] if record else 0
             unique_students = record['unique_students'] if record else 0
-            recent_count = record['recent_count'] if record else 0
             
             # 计算人均访问次数
             avg_visits = round(total_activities / unique_students, 1) if unique_students > 0 else 0
+            
+            # 近7天访问
+            result = session.run("""
+                MATCH (a:yzbx_Activity {module: $module})
+                WHERE a.timestamp > datetime() - duration('P7D')
+                RETURN count(a) as recent_count
+            """, module=module_name)
+            
+            record = result.single()
+            recent_count = record['recent_count'] if record else 0
         
         return {
             'module': module_name,

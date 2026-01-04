@@ -30,32 +30,37 @@ def get_activity_summary():
         driver = get_neo4j_driver()
         
         with driver.session() as session:
-            # 使用一个查询获取所有统计数据
-            result = session.run("""
-                MATCH (s:yzbx_Student)
-                OPTIONAL MATCH (a:yzbx_Activity)
-                OPTIONAL MATCH (today:yzbx_Activity)
-                WHERE date(today.timestamp) = date()
-                OPTIONAL MATCH (recent:yzbx_Activity)
-                WHERE recent.timestamp > datetime() - duration('P7D')
-                OPTIONAL MATCH (active_s:yzbx_Student)-[:PERFORMED]->(active_a:yzbx_Activity)
-                WHERE active_a.timestamp > datetime() - duration('P7D')
-                RETURN count(DISTINCT s) as total_students,
-                       count(DISTINCT a) as total_activities,
-                       count(DISTINCT today) as today_activities,
-                       count(DISTINCT active_s) as active_students
-            """)
+            # 总学生数
+            result = session.run("MATCH (s:yzbx_Student) RETURN count(s) as count")
+            total_students = result.single()['count']
             
-            record = result.single()
+            # 总活动数
+            result = session.run("MATCH (a:yzbx_Activity) RETURN count(a) as count")
+            total_activities = result.single()['count']
+            
+            # 今日活动数
+            result = session.run("""
+                MATCH (a:yzbx_Activity)
+                WHERE date(a.timestamp) = date()
+                RETURN count(a) as count
+            """)
+            today_activities = result.single()['count']
+            
+            # 活跃学生数（7天内）
+            result = session.run("""
+                MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
+                WHERE a.timestamp > datetime() - duration('P7D')
+                RETURN count(DISTINCT s) as count
+            """)
+            active_students = result.single()['count']
         
         return {
-            'total_students': record['total_students'] if record else 0,
-            'total_activities': record['total_activities'] if record else 0,
-            'today_activities': record['today_activities'] if record else 0,
-            'active_students': record['active_students'] if record else 0
+            'total_students': total_students,
+            'total_activities': total_activities,
+            'today_activities': today_activities,
+            'active_students': active_students
         }
-    except Exception as e:
-        print(f"获取活动概况失败: {e}")
+    except Exception:
         return {
             'total_students': 0,
             'total_activities': 0,
@@ -63,6 +68,7 @@ def get_activity_summary():
             'active_students': 0
         }
 
+@st.cache_data(ttl=300, show_spinner=False)  # 缓存5分钟
 def get_daily_activity_trend(days=7):
     """获取每日活动趋势"""
     if not check_neo4j_available():
