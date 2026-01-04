@@ -191,13 +191,18 @@ def analyze_learning_path(selected_abilities, mastery_levels, abilities_info=Non
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[{"role": "user", "content": prompt}],
-            stream=False
+            stream=False,
+            timeout=60  # 增加超时时间
         )
         
         return response.choices[0].message.content
     except Exception as e:
-        # 如果AI调用失败，返回一个详细的推荐
+        # 如果AI调用失败，返回一个详细的推荐，并包含错误信息
+        error_msg = str(e)
         return f"""
+## ⚠️ 注意：AI分析服务暂时不可用
+
+**错误信息**: `{error_msg[:100]}`
 ## 一、能力解读
 
 根据您选择的目标能力，以下是详细分析：
