@@ -493,14 +493,18 @@ def render_ability_recommender():
         
         # 创建雷达图
         if selected_ability_names:
+            # 闭合雷达图：将第一个点添加到末尾
+            closed_names = selected_ability_names + [selected_ability_names[0]]
+            closed_scores = selected_mastery_scores + [selected_mastery_scores[0]]
+            
             col1, col2 = st.columns([2, 1])
             
             with col1:
                 fig = go.Figure()
                 
                 fig.add_trace(go.Scatterpolar(
-                    r=selected_mastery_scores,
-                    theta=selected_ability_names,
+                    r=closed_scores,
+                    theta=closed_names,
                     fill='toself',
                     name='当前掌握度',
                     line=dict(color='#4ECDC4', width=3),

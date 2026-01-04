@@ -110,12 +110,12 @@ def get_neo4j_driver():
     
     current_time = time.time()
     
-    # 如果已有缓存的driver，且距离上次检查不超过60秒，直接返回
+    # 如果已有缓存的driver，且距离上次检查不超过300秒，直接返回
     if _cached_driver is not None:
-        if current_time - _driver_last_check < 60:
+        if current_time - _driver_last_check < 300:
             return _cached_driver
         try:
-            # 验证连接是否仍然有效（每60秒检查一次）
+            # 验证连接是否仍然有效（每300秒检查一次）
             _cached_driver.verify_connectivity()
             _driver_last_check = current_time
             return _cached_driver
@@ -421,6 +421,41 @@ def get_single_module_statistics(module_name):
             'avg_visits_per_student': 0,
             'recent_7d_visits': 0
         }
+
+@st.cache_data(ttl=120, show_spinner=False)  # 缓存2分钟
+def get_leaderboard(limit=10, module_name=None):
+    """获取学习排行榜（缓存优化）"""
+    if not check_neo4j_available():
+        return []
+    
+    try:
+        driver = get_neo4j_driver()
+        with driver.session() as session:
+            if module_name:
+                result = session.run("""
+                    MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
+                    WHERE COALESCE(a.module_name, a.module) = $module_name
+                    RETURN s.student_id as student_id, 
+                           s.name as name,
+                           count(a) as activity_count
+                    ORDER BY activity_count DESC
+                    LIMIT $limit
+                """, module_name=module_name, limit=limit)
+            else:
+                result = session.run("""
+                    MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
+                    RETURN s.student_id as student_id, 
+                           s.name as name,
+                           count(a) as activity_count,
+                           count(DISTINCT date(a.timestamp)) as active_days
+                    ORDER BY activity_count DESC
+                    LIMIT $limit
+                """, limit=limit)
+            
+            return [dict(record) for record in result]
+    except Exception as e:
+        print(f"获取排行榜失败: {e}")
+        return []
 
 def delete_student_data(student_id):
     """删除学生及其所有活动数据"""
