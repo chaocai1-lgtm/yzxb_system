@@ -144,6 +144,26 @@ st.markdown("""
         transform: none !important;
     }
     
+    /* 隐藏 DataFrame 的搜索框 */
+    [data-testid="stDataFrame"] input[type="text"],
+    [data-testid="stDataFrame"] input[placeholder*="search"],
+    [data-testid="stDataFrame"] input[placeholder*="Search"],
+    .ag-header-cell-filter-button,
+    .ag-floating-filter,
+    .ag-floating-filter-input,
+    .ag-text-field-input,
+    button[aria-label*="search"],
+    button[aria-label*="Search"],
+    div[class*="search"],
+    div[class*="Search"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        pointer-events: none !important;
+    }
+    
     /* 隐藏Streamlit的状态指示器 */
     .stStatusWidget,
     div[data-testid="stStatusWidget"],
