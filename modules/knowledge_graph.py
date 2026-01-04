@@ -70,7 +70,7 @@ def get_knowledge_graph_data(module_id=None):
 def create_knowledge_graph_viz(module_id=None):
     """创建知识图谱可视化"""
     # 使用浅色背景
-    net = Network(height="700px", width="100%", bgcolor="#ffffff", font_color="#333333")
+    net = Network(height="1100px", width="100%", bgcolor="#ffffff", font_color="#333333")
     
     # 配置物理引擎 - 优化布局，使用直线，减少交叠
     net.set_options("""
@@ -477,7 +477,7 @@ def render_knowledge_graph():
     # 生成并显示图谱
     with st.spinner("生成知识图谱中..."):
         html_content = create_knowledge_graph_viz(module_id)
-        components.html(html_content, height=600)
+        components.html(html_content, height=1200)
     
     # 学习进度标记
     st.sidebar.title("📊 学习进度")

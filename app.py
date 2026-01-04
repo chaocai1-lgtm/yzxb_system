@@ -497,9 +497,28 @@ st.markdown("""
         padding: 20px;
     }
     
-    /* Slider 样式 */
+    /* Slider 样式 - 固定高度防止行距变化 */
     .stSlider [data-baseweb="slider"] {
         background: rgba(102, 126, 234, 0.2);
+    }
+    
+    .stSlider {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    
+    .stSlider > div {
+        padding-top: 0 !important;
+    }
+    
+    .stSlider [data-testid="stTickBarMin"],
+    .stSlider [data-testid="stTickBarMax"] {
+        display: none !important;
+    }
+    
+    /* 能力选择区域固定行高 */
+    [data-testid="column"] {
+        min-height: auto !important;
     }
     
     /* DataFrame 样式 */
