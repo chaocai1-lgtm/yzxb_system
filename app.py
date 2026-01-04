@@ -1022,10 +1022,6 @@ def render_module_analytics(module_name):
     </div>
     """, unsafe_allow_html=True)
     
-    if not has_neo4j:
-        st.warning("⚠️ Neo4j数据库未连接，无法显示真实数据。请在本地部署时连接数据库。")
-        return
-    
     # 选项卡：个人数据 / 整体数据
     tab1, tab2 = st.tabs(["👤 学生个人数据", "📈 整体统计数据"])
     
@@ -1033,9 +1029,9 @@ def render_module_analytics(module_name):
         st.markdown("### 🔍 查询学生学习数据")
         
         # 获取真实学生列表
-        all_students = get_all_students()
+        all_students = get_all_students() if has_neo4j else []
         if not all_students:
-            st.info("暂无注册学生")
+            st.info("💡 当前暂无学生数据。学生注册登录后，数据会自动显示在此处。")
             return
         
         student_options = {f"{s['student_id']} - {s.get('name', '未设置姓名')}": s['student_id'] 
