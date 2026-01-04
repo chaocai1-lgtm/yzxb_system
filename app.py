@@ -760,6 +760,24 @@ def render_teacher_dashboard():
     print(f"[教师端调试] Neo4j可用: {has_neo4j}")
     print(f"[教师端调试] 学生总数: {total_students}, 今日活跃: {today_active}, 7日活跃: {active_7d}, 总活动: {total_acts}")
     
+    # 显示详细调试信息在页面上
+    with st.expander("🔍 调试信息（点击展开）", expanded=False):
+        st.write("**数据库连接状态:**")
+        st.write(f"- Neo4j可用: {has_neo4j}")
+        st.write(f"- 环境变量检查: NEO4J_URI={'已设置' if st.secrets.get('NEO4J_URI') else '未设置'}")
+        
+        st.write("**查询结果:**")
+        st.write(f"- summary数据: {summary}")
+        st.write(f"- 学生列表长度: {len(all_students)}")
+        if len(all_students) > 0:
+            st.write(f"- 前3个学生: {all_students[:3]}")
+        
+        st.write("**计算的统计数据:**")
+        st.write(f"- 学生总数: {total_students}")
+        st.write(f"- 今日活跃: {today_active}")
+        st.write(f"- 7日活跃学生: {active_7d}")
+        st.write(f"- 总学习记录: {total_acts}")
+    
     # 只在真正无数据时提示（避免本地开发时误报）
     if total_students == 0 and not has_neo4j:
         st.info("💡 提示：当前无学生数据。学生登录使用后即可在此查看学习统计。")
@@ -794,6 +812,11 @@ def render_teacher_dashboard():
     if has_neo4j:
         from modules.auth import get_all_modules_statistics
         all_module_stats = get_all_modules_statistics()
+        
+        # 调试：显示模块统计信息
+        with st.expander("🔍 模块统计调试信息", expanded=False):
+            st.write("**所有模块统计数据:**")
+            st.json(all_module_stats)
         
     for i, module in enumerate(modules):
         with module_cols[i]:
