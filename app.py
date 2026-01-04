@@ -1955,5 +1955,25 @@ def render_system_settings():
         </div>
         """, unsafe_allow_html=True)
 
+# 确保 session_state 在程序开始时就被初始化
+def init_session_state():
+    """初始化所有 session_state 变量"""
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 'home'
+    if 'selected_export_module' not in st.session_state:
+        st.session_state.selected_export_module = None
+    if 'just_logged_in' not in st.session_state:
+        st.session_state.just_logged_in = False
+    if 'confirm_delete' not in st.session_state:
+        st.session_state.confirm_delete = None
+    if 'confirm_clear_activities' not in st.session_state:
+        st.session_state.confirm_clear_activities = False
+    if 'confirm_clear_all' not in st.session_state:
+        st.session_state.confirm_clear_all = False
+
 if __name__ == "__main__":
+    # 先初始化 session_state
+    init_session_state()
+    # 再运行主程序
     main()
+
