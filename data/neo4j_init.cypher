@@ -82,13 +82,16 @@ CREATE (k30:yzbx_Knowledge {id: 'KP_M5_C2_2', name: 'SPT原则', chapter_id: 'C5
 CREATE (k31:yzbx_Knowledge {id: 'KP_M5_C2_3', name: '长期管理', chapter_id: 'C5_2', description: '监测探诊深度、出血指数，及时发现复发。', importance: 'medium'})
 
 // ==================== 能力节点 ====================
-CREATE (a1:yzbx_Ability {id: 'A1', name: '牙周组织识别能力', description: '能够识别和描述牙周组织的解剖结构', level: 'basic'})
-CREATE (a2:yzbx_Ability {id: 'A2', name: '牙周病因分析能力', description: '能够分析牙周病的病因和发病机制', level: 'intermediate'})
-CREATE (a3:yzbx_Ability {id: 'A3', name: '牙周检查能力', description: '能够进行标准化的牙周检查', level: 'intermediate'})
-CREATE (a4:yzbx_Ability {id: 'A4', name: '牙周诊断能力', description: '能够根据检查结果进行牙周病诊断和分类', level: 'advanced'})
-CREATE (a5:yzbx_Ability {id: 'A5', name: '牙周治疗计划能力', description: '能够制定系统的牙周治疗计划', level: 'advanced'})
-CREATE (a6:yzbx_Ability {id: 'A6', name: '基础治疗操作能力', description: '能够进行龈上洁治、龈下刮治等基础治疗', level: 'intermediate'})
-CREATE (a7:yzbx_Ability {id: 'A7', name: '口腔卫生指导能力', description: '能够进行有效的口腔卫生宣教', level: 'basic'})
+CREATE (a1:yzbx_Ability {id: 'A1', name: '牙周组织解剖识别', category: '基础能力', description: '能够识别和描述正常牙周组织的解剖结构，包括牙龈、牙周膜、牙槽骨和牙骨质', level: 'basic'})
+CREATE (a2:yzbx_Ability {id: 'A2', name: '牙周探诊技术', category: '基础能力', description: '掌握正确的牙周探诊方法和技巧，能够准确测量探诊深度', level: 'basic'})
+CREATE (a3:yzbx_Ability {id: 'A3', name: '牙菌斑识别', category: '诊断能力', description: '能够识别和评估牙菌斑的分布和程度，理解菌斑染色方法', level: 'intermediate'})
+CREATE (a4:yzbx_Ability {id: 'A4', name: '牙周病诊断', category: '诊断能力', description: '能够根据临床表现做出正确的牙周病诊断，掌握2018年新分类', level: 'intermediate'})
+CREATE (a5:yzbx_Ability {id: 'A5', name: 'X线片解读', category: '诊断能力', description: '能够解读牙周病相关的X线影像，判断骨吸收类型和程度', level: 'intermediate'})
+CREATE (a6:yzbx_Ability {id: 'A6', name: '洁治术操作', category: '治疗能力', description: '掌握龈上洁治术的操作技能，熟悉超声和手工器械使用', level: 'intermediate'})
+CREATE (a7:yzbx_Ability {id: 'A7', name: '刮治术操作', category: '治疗能力', description: '掌握龈下刮治和根面平整术的操作要点', level: 'advanced'})
+CREATE (a8:yzbx_Ability {id: 'A8', name: '治疗计划制定', category: '治疗能力', description: '能够制定合理的牙周治疗计划，包括分期分级和预后评估', level: 'advanced'})
+CREATE (a9:yzbx_Ability {id: 'A9', name: '口腔卫生指导', category: '预防能力', description: '能够进行有效的口腔卫生宣教，指导患者正确刷牙和使用辅助工具', level: 'basic'})
+CREATE (a10:yzbx_Ability {id: 'A10', name: '维护治疗管理', category: '预防能力', description: '掌握牙周维护治疗的原则和方法，制定个性化复查计划', level: 'intermediate'})
 
 // ==================== 模块-章节关系 ====================
 CREATE (m1)-[:CONTAINS]->(c1_1)

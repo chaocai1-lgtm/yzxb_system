@@ -29,6 +29,22 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     
+    /* 隐藏Streamlit加载时的半透明蒙版 */
+    div[data-testid="stAppViewBlockContainer"] > div:first-child > div:first-child {
+        background: transparent !important;
+    }
+    
+    /* 隐藏加载遮罩 */
+    .stApp > div:first-child > div:first-child > div > div[style*="opacity"] {
+        opacity: 1 !important;
+    }
+    
+    /* 禁用加载动画的半透明效果 */
+    [data-testid="stAppViewContainer"] > section > div {
+        opacity: 1 !important;
+        transition: none !important;
+    }
+    
     /* 浅色渐变背景 */
     .stApp {
         background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 50%, #f0f2f5 100%);

@@ -220,20 +220,19 @@ def render_ability_recommender():
     # 获取所有能力
     abilities = get_all_abilities()
     
-    # 如果数据库没有数据，使用示例能力
-    if not abilities:
-        abilities = [
-            {"id": "A1", "name": "牙周组织解剖识别", "category": "基础能力", "description": "能够识别和描述正常牙周组织的解剖结构"},
-            {"id": "A2", "name": "牙周探诊技术", "category": "基础能力", "description": "掌握正确的牙周探诊方法和技巧"},
-            {"id": "A3", "name": "牙菌斑识别", "category": "诊断能力", "description": "能够识别和评估牙菌斑的分布和程度"},
-            {"id": "A4", "name": "牙周病诊断", "category": "诊断能力", "description": "能够根据临床表现做出正确的牙周病诊断"},
-            {"id": "A5", "name": "X线片解读", "category": "诊断能力", "description": "能够解读牙周病相关的X线影像"},
-            {"id": "A6", "name": "洁治术操作", "category": "治疗能力", "description": "掌握龈上洁治术的操作技能"},
-            {"id": "A7", "name": "刮治术操作", "category": "治疗能力", "description": "掌握龈下刮治和根面平整术"},
-            {"id": "A8", "name": "治疗计划制定", "category": "治疗能力", "description": "能够制定合理的牙周治疗计划"},
-            {"id": "A9", "name": "口腔卫生指导", "category": "预防能力", "description": "能够进行有效的口腔卫生宣教"},
-            {"id": "A10", "name": "维护治疗管理", "category": "预防能力", "description": "掌握牙周维护治疗的原则和方法"},
-        ]
+    # 始终使用完整的10个能力列表（无论数据库有无数据）
+    abilities = [
+        {"id": "A1", "name": "牙周组织解剖识别", "category": "基础能力", "description": "能够识别和描述正常牙周组织的解剖结构，包括牙龈、牙周膜、牙槽骨和牙骨质"},
+        {"id": "A2", "name": "牙周探诊技术", "category": "基础能力", "description": "掌握正确的牙周探诊方法和技巧，能够准确测量探诊深度"},
+        {"id": "A3", "name": "牙菌斑识别", "category": "诊断能力", "description": "能够识别和评估牙菌斑的分布和程度，理解菌斑染色方法"},
+        {"id": "A4", "name": "牙周病诊断", "category": "诊断能力", "description": "能够根据临床表现做出正确的牙周病诊断，掌握2018年新分类"},
+        {"id": "A5", "name": "X线片解读", "category": "诊断能力", "description": "能够解读牙周病相关的X线影像，判断骨吸收类型和程度"},
+        {"id": "A6", "name": "洁治术操作", "category": "治疗能力", "description": "掌握龈上洁治术的操作技能，熟悉超声和手工器械使用"},
+        {"id": "A7", "name": "刮治术操作", "category": "治疗能力", "description": "掌握龈下刮治和根面平整术的操作要点"},
+        {"id": "A8", "name": "治疗计划制定", "category": "治疗能力", "description": "能够制定合理的牙周治疗计划，包括分期分级和预后评估"},
+        {"id": "A9", "name": "口腔卫生指导", "category": "预防能力", "description": "能够进行有效的口腔卫生宣教，指导患者正确刷牙和使用辅助工具"},
+        {"id": "A10", "name": "维护治疗管理", "category": "预防能力", "description": "掌握牙周维护治疗的原则和方法，制定个性化复查计划"},
+    ]
     
     # 按类别分组
     categories = {}
@@ -243,32 +242,45 @@ def render_ability_recommender():
             categories[cat] = []
         categories[cat].append(ability)
     
-    # 1. 能力选择
+    # 1. 能力选择 - 使用form避免每次交互都刷新页面
     st.subheader("1️⃣ 选择目标能力")
     
-    selected_abilities = []
-    mastery_levels = {}
+    # 初始化session_state
+    if 'selected_abilities' not in st.session_state:
+        st.session_state.selected_abilities = []
+    if 'mastery_levels' not in st.session_state:
+        st.session_state.mastery_levels = {}
     
+    # 使用expander分类显示能力，减少页面复杂度
     for category, abs_list in categories.items():
-        st.markdown(f"**{category}**")
-        for ability in abs_list:
-            col1, col2 = st.columns([3, 2])
-            with col1:
-                if st.checkbox(
-                    f"{ability['name']}",
-                    key=f"ability_{ability['id']}",
-                    help=ability['description']
-                ):
-                    selected_abilities.append(ability['id'])
-            with col2:
-                if ability['id'] in selected_abilities:
-                    level = st.slider(
-                        "当前掌握度",
-                        0.0, 1.0, 0.3, 0.1,
-                        key=f"level_{ability['id']}",
-                        label_visibility="collapsed"
+        with st.expander(f"📂 {category}", expanded=True):
+            for ability in abs_list:
+                col1, col2 = st.columns([3, 2])
+                with col1:
+                    checked = st.checkbox(
+                        f"{ability['name']}",
+                        key=f"ability_{ability['id']}",
+                        help=ability['description'],
+                        value=ability['id'] in st.session_state.selected_abilities
                     )
-                    mastery_levels[ability['id']] = level
+                    if checked and ability['id'] not in st.session_state.selected_abilities:
+                        st.session_state.selected_abilities.append(ability['id'])
+                    elif not checked and ability['id'] in st.session_state.selected_abilities:
+                        st.session_state.selected_abilities.remove(ability['id'])
+                with col2:
+                    if ability['id'] in st.session_state.selected_abilities:
+                        level = st.slider(
+                            "当前掌握度",
+                            0.0, 1.0, 
+                            st.session_state.mastery_levels.get(ability['id'], 0.3), 
+                            0.1,
+                            key=f"level_{ability['id']}",
+                            label_visibility="collapsed"
+                        )
+                        st.session_state.mastery_levels[ability['id']] = level
+    
+    selected_abilities = st.session_state.selected_abilities
+    mastery_levels = st.session_state.mastery_levels
     
     # 2. 生成推荐
     if selected_abilities:
