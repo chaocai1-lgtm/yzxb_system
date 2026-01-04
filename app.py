@@ -783,19 +783,23 @@ def render_teacher_dashboard():
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 四个模块数据概览 - 调用真实数据
+    # 四个模块数据概览 - 批量获取所有模块数据
     st.markdown("### 📈 各模块学习数据")
     
     modules = ["病例库", "知识图谱", "能力推荐", "课中互动"]
     module_cols = st.columns(4)
     
+    # 一次性获取所有模块统计数据
     if has_neo4j:
         from modules.auth import get_single_module_statistics
-        
+        all_module_stats = {}
+        for module in modules:
+            all_module_stats[module] = get_single_module_statistics(module)
+    
     for i, module in enumerate(modules):
         with module_cols[i]:
             if has_neo4j:
-                stats = get_single_module_statistics(module)
+                stats = all_module_stats[module]
                 visit_count = stats.get('total_visits', 0)
                 student_count = stats.get('unique_students', 0)
                 completion = int((student_count / total_students * 100)) if total_students > 0 else 0
@@ -842,10 +846,10 @@ def render_teacher_dashboard():
     with chart_col2:
         st.markdown("### 🥧 学生学习模块分布")
         if has_neo4j:
-            # 统计每个模块的访问学生数
+            # 使用已经获取的模块数据
             module_data = []
             for module in modules:
-                stats = get_single_module_statistics(module)
+                stats = all_module_stats[module]
                 module_data.append({
                     "模块": module,
                     "学生数": stats.get('unique_students', 0)

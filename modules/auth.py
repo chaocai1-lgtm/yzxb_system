@@ -203,6 +203,7 @@ def get_student_activities(student_id=None, module=None, limit=100):
         print(f"获取学生活动失败: {e}")
         return []
 
+@st.cache_data(ttl=300, show_spinner=False)  # 缓存5分钟
 def get_module_statistics():
     """获取各模块使用统计"""
     if not check_neo4j_available():
@@ -212,24 +213,21 @@ def get_module_statistics():
         driver = get_neo4j_driver()
         
         with driver.session() as session:
-            # 获取每个模块的详细统计
+            # 简化查询，移除不必要的OPTIONAL MATCH
             result = session.run("""
                 MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity)
                 WITH a.module as module, 
                      count(a) as total_activities,
-                     count(DISTINCT s) as unique_students,
-                     collect(DISTINCT s.student_id) as student_ids
-                OPTIONAL MATCH (a2:yzbx_Activity {module: module})
-                WHERE date(a2.timestamp) = date()
-                WITH module, total_activities, unique_students, student_ids, count(a2) as today_count
-                RETURN module, total_activities, unique_students, today_count
+                     count(DISTINCT s) as unique_students
+                RETURN module, total_activities, unique_students, 0 as today_count
                 ORDER BY total_activities DESC
             """)
             
             stats = [dict(record) for record in result]
         
         return stats
-    except:
+    except Exception as e:
+        print(f"获取模块统计失败: {e}")
         return []
 
 @st.cache_data(ttl=300, show_spinner=False)  # 缓存5分钟
@@ -248,29 +246,23 @@ def get_single_module_statistics(module_name):
         driver = get_neo4j_driver()
         
         with driver.session() as session:
-            # 总访问次数和学生数
+            # 合并为一个查询
             result = session.run("""
                 MATCH (s:yzbx_Student)-[:PERFORMED]->(a:yzbx_Activity {module: $module})
+                OPTIONAL MATCH (recent:yzbx_Activity {module: $module})
+                WHERE recent.timestamp > datetime() - duration('P7D')
                 RETURN count(a) as total_activities,
-                       count(DISTINCT s) as unique_students
+                       count(DISTINCT s) as unique_students,
+                       count(DISTINCT recent) as recent_count
             """, module=module_name)
             
             record = result.single()
             total_activities = record['total_activities'] if record else 0
             unique_students = record['unique_students'] if record else 0
+            recent_count = record['recent_count'] if record else 0
             
             # 计算人均访问次数
             avg_visits = round(total_activities / unique_students, 1) if unique_students > 0 else 0
-            
-            # 近7天访问
-            result = session.run("""
-                MATCH (a:yzbx_Activity {module: $module})
-                WHERE a.timestamp > datetime() - duration('P7D')
-                RETURN count(a) as recent_count
-            """, module=module_name)
-            
-            record = result.single()
-            recent_count = record['recent_count'] if record else 0
         
         return {
             'module': module_name,
