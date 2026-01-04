@@ -1,0 +1,249 @@
+[
+  {
+    "id": "C001",
+    "title": "慢性牙周炎病例（Stage III, Grade B）",
+    "chief_complaint": "牙龈出血、口臭半年余",
+    "patient_info": {
+      "age": 45,
+      "gender": "女",
+      "smoking": false,
+      "systemic_disease": "无"
+    },
+    "symptoms": [
+      "刷牙时牙龈出血",
+      "咀嚼无力",
+      "口臭明显",
+      "食物嵌塞"
+    ],
+    "examination": {
+      "oral_hygiene": "差，可见大量软垢和牙石",
+      "gingiva": "牙龈红肿，探诊出血阳性",
+      "probing_depth": "4-6mm，多个位点",
+      "attachment_loss": "3-5mm",
+      "tooth_mobility": "部分牙齿I度松动",
+      "furcation": "36、46根分叉I度病变",
+      "x_ray": "牙槽骨水平吸收，部分区域吸收达根长1/2"
+    },
+    "diagnosis": "慢性牙周炎（Stage III, Grade B）",
+    "stage_grade_analysis": {
+      "stage": "III - 重度牙周炎，附着丧失3-5mm，部分牙齿松动",
+      "grade": "B - 骨丧失/年龄比值0.5-1.0，中等进展速度"
+    },
+    "treatment_plan": [
+      "口腔卫生指导与菌斑控制",
+      "龈上洁治术",
+      "龈下刮治与根面平整术（分区进行）",
+      "再评估（4-6周后）",
+      "必要时牙周手术（翻瓣术）",
+      "维护期治疗（3-6个月复查）"
+    ],
+    "related_knowledge": [
+      "KP_M3_C7_1",
+      "KP_M3_C10_1",
+      "KP_M4_C13_2",
+      "KP_M4_C13_3"
+    ],
+    "difficulty": "中等",
+    "learning_points": [
+      "掌握牙周炎的临床诊断流程",
+      "理解分期分级的意义",
+      "掌握序列治疗的原则",
+      "学会制定个性化治疗计划"
+    ]
+  },
+  {
+    "id": "C002",
+    "title": "侵袭性牙周炎病例（Stage IV, Grade C）",
+    "chief_complaint": "前牙松动、牙龈肿痛",
+    "patient_info": {
+      "age": 28,
+      "gender": "男",
+      "smoking": true,
+      "systemic_disease": "无"
+    },
+    "symptoms": [
+      "前牙明显松动",
+      "牙龈反复肿痛",
+      "牙齿移位",
+      "咬合无力"
+    ],
+    "examination": {
+      "oral_hygiene": "尚可，菌斑控制一般",
+      "gingiva": "前牙区牙龈红肿明显，探诊出血++",
+      "probing_depth": "7-9mm（11、21、31、41）",
+      "attachment_loss": ">5mm",
+      "tooth_mobility": "11、21、31、41 II-III度松动",
+      "furcation": "16、26根分叉II度病变",
+      "x_ray": "11、21、31、41牙槽骨严重吸收（>根长2/3），呈弧形或垂直吸收"
+    },
+    "diagnosis": "牙周炎（Stage IV, Grade C） - 原侵袭性牙周炎",
+    "stage_grade_analysis": {
+      "stage": "IV - 重度牙周炎伴牙列丧失风险，附着丧失>5mm，III度松动",
+      "grade": "C - 快速进展，年轻患者短期内严重骨丧失，吸烟危险因素"
+    },
+    "treatment_plan": [
+      "戒烟咨询（关键！）",
+      "全面口腔卫生指导",
+      "系统性牙周治疗",
+      "龈下刮治配合局部抗菌药",
+      "必要时全身抗生素辅助（甲硝唑+阿莫西林）",
+      "牙周手术治疗",
+      "松动牙固定",
+      "前牙区美学修复",
+      "严密的维护治疗（2-3个月复查）"
+    ],
+    "related_knowledge": [
+      "KP_M3_C10_3",
+      "KP_M2_C4_6",
+      "KP_M4_C13_2",
+      "KP_M4_C14_3"
+    ],
+    "difficulty": "困难",
+    "learning_points": [
+      "识别侵袭性牙周炎的特征",
+      "理解Grade C快速进展的机制",
+      "掌握复杂病例的综合治疗",
+      "认识戒烟的重要性"
+    ]
+  },
+  {
+    "id": "C003",
+    "title": "牙龈炎病例",
+    "chief_complaint": "刷牙出血",
+    "patient_info": {
+      "age": 22,
+      "gender": "女",
+      "smoking": false,
+      "systemic_disease": "无"
+    },
+    "symptoms": [
+      "刷牙时偶尔出血",
+      "牙龈颜色略深",
+      "无明显疼痛"
+    ],
+    "examination": {
+      "oral_hygiene": "尚可，可见少量软垢",
+      "gingiva": "牙龈轻度红肿，边缘圆钝，探诊出血阳性",
+      "probing_depth": "2-3mm，未超过龈缘",
+      "attachment_loss": "0mm（无附着丧失）",
+      "tooth_mobility": "无",
+      "furcation": "无",
+      "x_ray": "牙槽骨高度正常"
+    },
+    "diagnosis": "菌斑性牙龈炎",
+    "treatment_plan": [
+      "口腔卫生宣教（Bass刷牙法）",
+      "龈上洁治术",
+      "牙线使用指导",
+      "2周后复查"
+    ],
+    "related_knowledge": [
+      "KP_M3_C9_1",
+      "KP_M4_C13_1",
+      "KP_M5_C16_2"
+    ],
+    "difficulty": "简单",
+    "learning_points": [
+      "区分牙龈炎与牙周炎的关键",
+      "理解牙龈炎的可逆性",
+      "掌握基础的菌斑控制方法",
+      "认识早期干预的重要性"
+    ]
+  },
+  {
+    "id": "C004",
+    "title": "牙周-牙髓联合病变",
+    "chief_complaint": "右下后牙疼痛、牙龈肿胀",
+    "patient_info": {
+      "age": 38,
+      "gender": "男",
+      "smoking": false,
+      "systemic_disease": "无"
+    },
+    "symptoms": [
+      "咬合痛明显",
+      "冷热刺激痛",
+      "牙龈肿胀、触痛",
+      "自发性疼痛"
+    ],
+    "examination": {
+      "oral_hygiene": "一般",
+      "tooth": "46",
+      "gingiva": "46颊侧牙龈红肿，触痛明显",
+      "vitality_test": "46牙髓活力测试阴性",
+      "percussion": "垂直叩诊(+++)，水平叩诊(+)",
+      "probing_depth": "颊侧近中8mm，其他位点4-5mm",
+      "sinus_tract": "无",
+      "x_ray": "46根尖周透射影，颊侧牙槽骨垂直吸收"
+    },
+    "diagnosis": "46牙周-牙髓联合病变（真性联合病变）",
+    "differential_diagnosis": "需区分原发病变来源",
+    "treatment_plan": [
+      "急性期处理：引流、止痛",
+      "46完善根管治疗（优先）",
+      "待根管治疗后1-2周",
+      "牙周治疗：龈下刮治",
+      "再评估，必要时牙周手术",
+      "最终修复",
+      "定期复查"
+    ],
+    "related_knowledge": [
+      "KP_M3_C11_1",
+      "KP_M4_C13_2",
+      "KP_M4_C15_1"
+    ],
+    "difficulty": "中等",
+    "learning_points": [
+      "理解牙周-牙髓联合病变的解剖基础",
+      "掌握联合病变的诊断思路",
+      "学会制定多学科治疗方案",
+      "理解治疗的优先次序"
+    ]
+  },
+  {
+    "id": "C005",
+    "title": "药物性牙龈肥大",
+    "chief_complaint": "牙龈增生、刷牙出血",
+    "patient_info": {
+      "age": 52,
+      "gender": "男",
+      "smoking": false,
+      "systemic_disease": "高血压（服用硝苯地平3年）"
+    },
+    "symptoms": [
+      "牙龈明显增生",
+      "刷牙出血",
+      "咀嚼不适",
+      "影响美观"
+    ],
+    "examination": {
+      "oral_hygiene": "差，大量软垢和牙石",
+      "gingiva": "上下前牙及后牙区牙龈明显增生，质地坚韧，部分覆盖牙冠",
+      "color": "粉红色为主，龈缘有炎症",
+      "probing_depth": "假性牙周袋5-7mm",
+      "attachment_loss": "轻度",
+      "x_ray": "牙槽骨高度基本正常"
+    },
+    "diagnosis": "药物性牙龈肥大（硝苯地平所致）",
+    "treatment_plan": [
+      "与内科医生会诊，评估更换降压药可能性",
+      "口腔卫生指导（关键！）",
+      "龈上龈下彻底洁治",
+      "如增生严重：牙龈切除术+牙龈成形术",
+      "术后严格菌斑控制",
+      "定期复查（复发风险高）"
+    ],
+    "related_knowledge": [
+      "KP_M3_C9_3",
+      "KP_M4_C14_2",
+      "KP_M2_C6_5"
+    ],
+    "difficulty": "中等",
+    "learning_points": [
+      "识别药物性牙龈肥大的特征",
+      "理解药物与菌斑的协同作用",
+      "掌握与内科医生的协作",
+      "认识菌斑控制在预防复发中的作用"
+    ]
+  }
+]

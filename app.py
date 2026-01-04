@@ -1,0 +1,857 @@
+"""
+牙周病学自适应学习系统 - 主应用
+"""
+
+import streamlit as st
+from modules.case_library import render_case_library
+from modules.knowledge_graph import render_knowledge_graph
+from modules.ability_recommender import render_ability_recommender
+from modules.classroom_interaction import render_classroom_interaction
+from modules.auth import render_login_page, check_login, get_current_user, logout
+from modules.analytics import render_analytics_dashboard, render_module_analytics
+
+# 页面配置
+st.set_page_config(
+    page_title="牙周病学自适应学习系统",
+    page_icon="🦷",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# 高端现代化主题CSS
+st.markdown("""
+<style>
+    /* 导入Google字体 */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    /* 全局字体 */
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    /* 浅色渐变背景 */
+    .stApp {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 50%, #f0f2f5 100%);
+        min-height: 100vh;
+    }
+    
+    /* 隐藏默认侧边栏 */
+    [data-testid="stSidebar"] {
+        display: none !important;
+    }
+    
+    /* 玻璃态效果容器 */
+    .glass-container {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        padding: 30px;
+        margin: 10px 0;
+        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
+    }
+    
+    /* 顶部导航栏 */
+    .top-nav {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        backdrop-filter: blur(20px);
+        border-radius: 16px;
+        border: none;
+        padding: 15px 30px;
+        margin-bottom: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    /* Logo区域 */
+    .logo-section {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .logo-icon {
+        font-size: 40px;
+    }
+    
+    .logo-text {
+        font-size: 24px;
+        font-weight: 700;
+        color: #fff;
+        letter-spacing: -0.5px;
+    }
+    
+    .logo-subtitle {
+        font-size: 11px;
+        color: rgba(255,255,255,0.8);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }
+    
+    /* 用户信息 */
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 10px 20px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50px;
+        border: 1px solid rgba(255,255,255,0.3);
+    }
+    
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+    
+    .user-name {
+        color: #fff;
+        font-weight: 500;
+    }
+    
+    .user-role {
+        color: rgba(255,255,255,0.8);
+        font-size: 12px;
+    }
+    
+    /* 功能卡片 */
+    .feature-card {
+        background: #fff;
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        padding: 30px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        height: 280px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        background: #fff;
+        border-color: rgba(102, 126, 234, 0.5);
+        box-shadow: 0 20px 40px rgba(102, 126, 234, 0.25);
+    }
+    
+    .feature-icon {
+        font-size: 60px;
+        margin-bottom: 20px;
+        display: block;
+    }
+    
+    .feature-title {
+        color: #2d3748;
+        font-size: 22px;
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+    
+    .feature-desc {
+        color: #718096;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    
+    /* 统计卡片 */
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        backdrop-filter: blur(20px);
+        border-radius: 16px;
+        border: none;
+        padding: 25px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .stat-number {
+        font-size: 42px;
+        font-weight: 700;
+        color: #fff;
+    }
+    
+    .stat-label {
+        color: rgba(255,255,255,0.9);
+        font-size: 14px;
+        margin-top: 8px;
+    }
+    
+    /* 页面标题 */
+    .page-title {
+        font-size: 32px;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .page-subtitle {
+        color: #718096;
+        font-size: 16px;
+        margin-bottom: 30px;
+    }
+    
+    /* 渐变文字 */
+    .gradient-text {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    /* 导航按钮样式 */
+    .stButton>button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        width: 100%;
+        font-size: 14px;
+    }
+    
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+    }
+    
+    /* 输入框样式 - 完全覆盖所有边框 */
+    .stTextInput>div>div>input, 
+    .stTextInput>div>div>input:focus,
+    .stTextInput>div>div>input:active,
+    .stTextInput>div>div>input:focus-visible,
+    .stTextArea>div>div>textarea,
+    .stTextArea>div>div>textarea:focus,
+    .stTextArea>div>div>textarea:active,
+    .stTextArea>div>div>textarea:focus-visible {
+        background: #fff !important;
+        border: 2px solid #667eea !important;
+        border-radius: 12px !important;
+        color: #2d3748 !important;
+        padding: 15px !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    
+    /* 未选中状态的边框 */
+    .stTextInput>div>div>input:not(:focus),
+    .stTextArea>div>div>textarea:not(:focus) {
+        border: 2px solid rgba(102, 126, 234, 0.3) !important;
+    }
+    
+    /* 移除所有可能的外层容器边框 */
+    .stTextInput>div,
+    .stTextInput>div>div,
+    .stTextArea>div,
+    .stTextArea>div>div {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    
+    /* 选择框样式 */
+    .stSelectbox>div>div {
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+    }
+    
+    /* Radio按钮样式 */
+    .stRadio>div {
+        background: rgba(255,255,255,0.8);
+        border-radius: 12px;
+        padding: 15px;
+    }
+    
+    .stRadio>div>div>label {
+        color: #2d3748 !important;
+    }
+    
+    /* 指标卡片 */
+    [data-testid="metric-container"] {
+        background: #fff;
+        backdrop-filter: blur(20px);
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.1);
+    }
+    
+    [data-testid="metric-container"] label {
+        color: #718096 !important;
+    }
+    
+    [data-testid="metric-container"] [data-testid="stMetricValue"] {
+        color: #2d3748 !important;
+    }
+    
+    /* 扩展器样式 */
+    .streamlit-expanderHeader {
+        background: rgba(102, 126, 234, 0.1);
+        border-radius: 12px;
+        color: #2d3748 !important;
+    }
+    
+    /* 分隔线 */
+    hr {
+        border-color: rgba(102, 126, 234, 0.2);
+    }
+    
+    /* 标签页样式 */
+    .stTabs [data-baseweb="tab-list"] {
+        background: rgba(102, 126, 234, 0.1);
+        border-radius: 12px;
+        padding: 5px;
+        gap: 5px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        color: #718096;
+        border-radius: 8px;
+        padding: 10px 20px;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff !important;
+    }
+    
+    /* 滚动条样式 */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: rgba(102, 126, 234, 0.1);
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+    }
+    
+    /* 成功/警告/错误消息 */
+    .stSuccess {
+        background: rgba(46, 204, 113, 0.2) !important;
+        border: 1px solid rgba(46, 204, 113, 0.5) !important;
+        color: #2ecc71 !important;
+        border-radius: 12px;
+    }
+    
+    .stWarning {
+        background: rgba(241, 196, 15, 0.2) !important;
+        border: 1px solid rgba(241, 196, 15, 0.5) !important;
+        color: #f1c40f !important;
+        border-radius: 12px;
+    }
+    
+    .stError {
+        background: rgba(231, 76, 60, 0.2) !important;
+        border: 1px solid rgba(231, 76, 60, 0.5) !important;
+        color: #e74c3c !important;
+        border-radius: 12px;
+    }
+    
+    .stInfo {
+        background: rgba(102, 126, 234, 0.2) !important;
+        border: 1px solid rgba(102, 126, 234, 0.5) !important;
+        color: #a8c0ff !important;
+        border-radius: 12px;
+    }
+    
+    /* Markdown文字颜色 */
+    .stMarkdown p, .stMarkdown li {
+        color: #4a5568;
+    }
+    
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+        color: #2d3748;
+    }
+    
+    /* 隐藏Streamlit默认页脚 */
+    footer {visibility: hidden;}
+    
+    /* 隐藏菜单按钮 */
+    #MainMenu {visibility: hidden;}
+    
+    /* 隐藏顶部装饰线 */
+    header[data-testid="stHeader"] {
+        background: transparent;
+    }
+    
+    /* 欢迎横幅 */
+    .welcome-banner {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        border: none;
+        padding: 40px;
+        margin-bottom: 30px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .welcome-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 60%);
+        pointer-events: none;
+    }
+    
+    .welcome-title {
+        font-size: 32px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 10px;
+    }
+    
+    .welcome-subtitle {
+        color: rgba(255,255,255,0.9);
+        font-size: 16px;
+    }
+    
+    /* 动画效果 */
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    .floating {
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    /* 发光效果 */
+    .glow {
+        box-shadow: 0 0 40px rgba(102, 126, 234, 0.3);
+    }
+    
+    /* 返回按钮 */
+    .back-btn {
+        background: rgba(102, 126, 234, 0.1);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 10px;
+        padding: 8px 20px;
+        color: #667eea;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .back-btn:hover {
+        background: rgba(102, 126, 234, 0.2);
+    }
+    
+    /* 模块页面标题 */
+    .module-header {
+        background: #fff;
+        backdrop-filter: blur(20px);
+        border-radius: 16px;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        padding: 20px 30px;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.1);
+    }
+    
+    .module-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2d3748;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    /* 底部信息 */
+    .footer-info {
+        text-align: center;
+        color: #718096;
+        font-size: 12px;
+        margin-top: 50px;
+        padding: 20px;
+    }
+    
+    /* Slider 样式 */
+    .stSlider [data-baseweb="slider"] {
+        background: rgba(102, 126, 234, 0.2);
+    }
+    
+    /* DataFrame 样式 */
+    .stDataFrame {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+    }
+    
+    /* 进度条 */
+    .stProgress > div > div {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+def main():
+    # 检查登录状态
+    if not check_login():
+        render_login_page()
+        return
+    
+    # 获取当前用户
+    user = get_current_user()
+    
+    # 顶部导航栏
+    st.markdown(f"""
+    <div class="top-nav">
+        <div class="logo-section">
+            <span class="logo-icon">🦷</span>
+            <div>
+                <div class="logo-text">牙周病学自适应学习系统</div>
+                <div class="logo-subtitle">PERIODONTAL AI LEARNING PLATFORM</div>
+            </div>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar">{'👨‍🎓' if user['role'] == 'student' else '👨‍🏫'}</div>
+            <div>
+                <div class="user-name">{user.get('name', '教师')}</div>
+                <div class="user-role">{'学生' if user['role'] == 'student' else '教师'}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 初始化当前页面状态
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 'home'
+    
+    # 导航按钮行
+    if user['role'] == 'teacher':
+        nav_cols = st.columns([1, 1, 1, 1, 1, 1])
+        with nav_cols[0]:
+            if st.button("🏠 首页", key="nav_home_t", use_container_width=True):
+                st.session_state.current_page = 'home'
+                st.rerun()
+        with nav_cols[1]:
+            if st.button("📚 病例库数据", key="nav_case_t", use_container_width=True):
+                st.session_state.current_page = 'case_analytics'
+                st.rerun()
+        with nav_cols[2]:
+            if st.button("🗺️ 图谱数据", key="nav_graph_t", use_container_width=True):
+                st.session_state.current_page = 'graph_analytics'
+                st.rerun()
+        with nav_cols[3]:
+            if st.button("🎯 推荐数据", key="nav_ability_t", use_container_width=True):
+                st.session_state.current_page = 'ability_analytics'
+                st.rerun()
+        with nav_cols[4]:
+            if st.button("💬 互动数据", key="nav_int_t", use_container_width=True):
+                st.session_state.current_page = 'interaction_analytics'
+                st.rerun()
+        with nav_cols[5]:
+            if st.button("🚪 退出登录", key="nav_logout_t", use_container_width=True):
+                logout()
+                st.rerun()
+    else:
+        nav_cols = st.columns([1, 1, 1, 1, 1, 1])
+        with nav_cols[0]:
+            if st.button("🏠 首页", key="nav_home", use_container_width=True):
+                st.session_state.current_page = 'home'
+                st.rerun()
+        with nav_cols[1]:
+            if st.button("📚 病例库", key="nav_case", use_container_width=True):
+                st.session_state.current_page = 'case_library'
+                st.rerun()
+        with nav_cols[2]:
+            if st.button("🗺️ 知识图谱", key="nav_graph", use_container_width=True):
+                st.session_state.current_page = 'knowledge_graph'
+                st.rerun()
+        with nav_cols[3]:
+            if st.button("🎯 能力推荐", key="nav_ability", use_container_width=True):
+                st.session_state.current_page = 'ability_recommender'
+                st.rerun()
+        with nav_cols[4]:
+            if st.button("💬 课中互动", key="nav_int", use_container_width=True):
+                st.session_state.current_page = 'classroom'
+                st.rerun()
+        with nav_cols[5]:
+            if st.button("🚪 退出登录", key="nav_logout", use_container_width=True):
+                logout()
+                st.rerun()
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 根据当前页面渲染内容
+    current = st.session_state.current_page
+    
+    if current == 'home':
+        render_home_page(user)
+    elif current == 'case_library':
+        render_case_library()
+    elif current == 'knowledge_graph':
+        render_knowledge_graph()
+    elif current == 'ability_recommender':
+        render_ability_recommender()
+    elif current == 'classroom':
+        render_classroom_interaction()
+    elif current == 'case_analytics':
+        render_module_analytics("病例库")
+    elif current == 'graph_analytics':
+        render_module_analytics("知识图谱")
+    elif current == 'ability_analytics':
+        render_module_analytics("能力推荐")
+    elif current == 'interaction_analytics':
+        render_module_analytics("课中互动")
+    elif current == 'system_settings':
+        render_system_settings()
+
+def render_home_page(user):
+    """渲染首页"""
+    # 读取统计配置
+    import json
+    try:
+        with open('config/stats_config.json', 'r', encoding='utf-8') as f:
+            stats = json.load(f)
+    except:
+        stats = {"case_count": 12, "knowledge_points": 45, "core_abilities": 10}
+    
+    # 欢迎横幅
+    st.markdown(f"""
+    <div class="welcome-banner">
+        <div class="welcome-title">👋 欢迎回来，{user.get('name', '用户')}！</div>
+        <div class="welcome-subtitle">今天想学习什么？选择下方功能模块开始你的学习之旅</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 统计卡片
+    stat_cols = st.columns(4)
+    with stat_cols[0]:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{stats.get('case_count', 12)}</div>
+            <div class="stat-label">📚 病例总数</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with stat_cols[1]:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{stats.get('knowledge_points', 45)}</div>
+            <div class="stat-label">🧠 知识点</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with stat_cols[2]:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{stats.get('core_abilities', 10)}</div>
+            <div class="stat-label">🎯 核心能力</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with stat_cols[3]:
+        st.markdown("""
+        <div class="stat-card">
+            <div class="stat-number">AI</div>
+            <div class="stat-label">🤖 智能推荐</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 功能模块标题
+    st.markdown("""
+    <div class="page-title">
+        <span>🚀</span> 
+        <span class="gradient-text">功能模块</span>
+    </div>
+    <div class="page-subtitle">选择一个模块开始学习，AI将为你提供个性化的学习体验</div>
+    """, unsafe_allow_html=True)
+    
+    # 功能模块卡片
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown("""
+        <div class="feature-card glow">
+            <span class="feature-icon">📚</span>
+            <div class="feature-title">智能病例库</div>
+            <div class="feature-desc">真实临床病例学习<br>AI辅助诊断分析<br>掌握牙周病临床思维</div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("进入病例库", key="btn_case", use_container_width=True):
+            st.session_state.current_page = 'case_library'
+            st.rerun()
+    
+    with col2:
+        st.markdown("""
+        <div class="feature-card">
+            <span class="feature-icon">🗺️</span>
+            <div class="feature-title">知识图谱</div>
+            <div class="feature-desc">可视化知识网络<br>理清知识脉络<br>构建系统化知识体系</div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("进入图谱", key="btn_graph", use_container_width=True):
+            st.session_state.current_page = 'knowledge_graph'
+            st.rerun()
+    
+    with col3:
+        st.markdown("""
+        <div class="feature-card">
+            <span class="feature-icon">🎯</span>
+            <div class="feature-title">AI能力推荐</div>
+            <div class="feature-desc">基于能力自评<br>DeepSeek大模型<br>规划个性化学习路径</div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("进入推荐", key="btn_ability", use_container_width=True):
+            st.session_state.current_page = 'ability_recommender'
+            st.rerun()
+    
+    with col4:
+        st.markdown("""
+        <div class="feature-card">
+            <span class="feature-icon">💬</span>
+            <div class="feature-title">课中互动</div>
+            <div class="feature-desc">实时投票弹幕<br>AI智能答疑<br>让课堂更加生动</div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("进入互动", key="btn_class", use_container_width=True):
+            st.session_state.current_page = 'classroom'
+            st.rerun()
+    
+    # 技术栈展示
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="footer-info">
+        <div style="margin-bottom: 15px;">
+            <span style="padding: 8px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border-radius: 20px; margin: 0 5px; display: inline-block;">🤖 DeepSeek AI</span>
+            <span style="padding: 8px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border-radius: 20px; margin: 0 5px; display: inline-block;">📊 Neo4j</span>
+            <span style="padding: 8px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border-radius: 20px; margin: 0 5px; display: inline-block;">🔍 Elasticsearch</span>
+            <span style="padding: 8px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border-radius: 20px; margin: 0 5px; display: inline-block;">⚡ Streamlit</span>
+        </div>
+        © 2026 牙周病学自适应学习系统 · Powered by AI Technology
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_system_settings():
+    """渲染系统设置页面（仅教师可用）"""
+    st.title("⚙️ 系统设置")
+    
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                padding: 20px; border-radius: 12px; margin-bottom: 30px;">
+        <h3 style="margin: 0; color: white;">📊 首页统计数据设置</h3>
+        <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9);">
+            设置首页展示的统计数据，这些数据将显示给所有学生
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 读取当前配置
+    import json
+    try:
+        with open('config/stats_config.json', 'r', encoding='utf-8') as f:
+            stats = json.load(f)
+    except:
+        stats = {"case_count": 12, "knowledge_points": 45, "core_abilities": 10}
+    
+    # 编辑表单
+    with st.form("stats_form"):
+        st.markdown("### 📝 编辑统计数据")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            case_count = st.number_input(
+                "📚 病例总数", 
+                min_value=0, 
+                value=stats.get("case_count", 12),
+                step=1,
+                help="设置系统中的病例总数"
+            )
+        
+        with col2:
+            knowledge_points = st.number_input(
+                "🧠 知识点数量", 
+                min_value=0, 
+                value=stats.get("knowledge_points", 45),
+                step=1,
+                help="设置系统中的知识点数量"
+            )
+        
+        with col3:
+            core_abilities = st.number_input(
+                "🎯 核心能力数", 
+                min_value=0, 
+                value=stats.get("core_abilities", 10),
+                step=1,
+                help="设置系统中的核心能力数量"
+            )
+        
+        submitted = st.form_submit_button("💾 保存设置", use_container_width=True, type="primary")
+        
+        if submitted:
+            new_stats = {
+                "case_count": int(case_count),
+                "knowledge_points": int(knowledge_points),
+                "core_abilities": int(core_abilities)
+            }
+            
+            try:
+                with open('config/stats_config.json', 'w', encoding='utf-8') as f:
+                    json.dump(new_stats, f, ensure_ascii=False, indent=4)
+                st.success("✅ 设置已保存！学生在首页将看到更新后的数据。")
+            except Exception as e:
+                st.error(f"❌ 保存失败：{str(e)}")
+    
+    # 当前设置预览
+    st.markdown("---")
+    st.markdown("### 👀 当前设置预览")
+    
+    preview_cols = st.columns(3)
+    with preview_cols[0]:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{stats.get('case_count', 12)}</div>
+            <div class="stat-label">📚 病例总数</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with preview_cols[1]:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{stats.get('knowledge_points', 45)}</div>
+            <div class="stat-label">🧠 知识点</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with preview_cols[2]:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{stats.get('core_abilities', 10)}</div>
+            <div class="stat-label">🎯 核心能力</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    main()
