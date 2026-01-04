@@ -575,27 +575,21 @@ def main():
         with nav_cols[0]:
             if st.button("🏠 首页", key="nav_home_t", use_container_width=True):
                 st.session_state.current_page = 'home'
-                st.rerun()
         with nav_cols[1]:
             if st.button("📚 病例库数据", key="nav_case_t", use_container_width=True):
                 st.session_state.current_page = 'case_analytics'
-                st.rerun()
         with nav_cols[2]:
             if st.button("🗺️ 图谱数据", key="nav_graph_t", use_container_width=True):
                 st.session_state.current_page = 'graph_analytics'
-                st.rerun()
         with nav_cols[3]:
             if st.button("🎯 推荐数据", key="nav_ability_t", use_container_width=True):
                 st.session_state.current_page = 'ability_analytics'
-                st.rerun()
         with nav_cols[4]:
             if st.button("💬 互动数据", key="nav_int_t", use_container_width=True):
                 st.session_state.current_page = 'interaction_analytics'
-                st.rerun()
         with nav_cols[5]:
             if st.button("⚙️ 系统设置", key="nav_settings_t", use_container_width=True):
                 st.session_state.current_page = 'system_settings'
-                st.rerun()
         with nav_cols[6]:
             if st.button("🚪 退出登录", key="nav_logout_t", use_container_width=True):
                 logout()
@@ -605,23 +599,18 @@ def main():
         with nav_cols[0]:
             if st.button("🏠 首页", key="nav_home", use_container_width=True):
                 st.session_state.current_page = 'home'
-                st.rerun()
         with nav_cols[1]:
             if st.button("📚 病例库", key="nav_case", use_container_width=True):
                 st.session_state.current_page = 'case_library'
-                st.rerun()
         with nav_cols[2]:
             if st.button("🗺️ 知识图谱", key="nav_graph", use_container_width=True):
                 st.session_state.current_page = 'knowledge_graph'
-                st.rerun()
         with nav_cols[3]:
             if st.button("🎯 能力推荐", key="nav_ability", use_container_width=True):
                 st.session_state.current_page = 'ability_recommender'
-                st.rerun()
         with nav_cols[4]:
             if st.button("💬 课中互动", key="nav_int", use_container_width=True):
                 st.session_state.current_page = 'classroom'
-                st.rerun()
         with nav_cols[5]:
             if st.button("🚪 退出登录", key="nav_logout", use_container_width=True):
                 logout()
@@ -632,37 +621,45 @@ def main():
     # 根据当前页面渲染内容
     current = st.session_state.current_page
     
-    # 教师端和学生端分开处理
-    if user['role'] == 'teacher':
-        # 教师端直接显示数据概览
-        if current == 'home':
-            render_teacher_dashboard()
-        elif current == 'case_analytics':
-            render_module_analytics("病例库")
-        elif current == 'graph_analytics':
-            render_module_analytics("知识图谱")
-        elif current == 'ability_analytics':
-            render_module_analytics("能力推荐")
-        elif current == 'interaction_analytics':
-            render_module_analytics("课中互动")
-        elif current == 'system_settings':
-            render_system_settings()
+    # 使用错误处理防止页面卡住
+    try:
+        # 教师端和学生端分开处理
+        if user['role'] == 'teacher':
+            # 教师端直接显示数据概览
+            if current == 'home':
+                render_teacher_dashboard()
+            elif current == 'case_analytics':
+                render_module_analytics("病例库")
+            elif current == 'graph_analytics':
+                render_module_analytics("知识图谱")
+            elif current == 'ability_analytics':
+                render_module_analytics("能力推荐")
+            elif current == 'interaction_analytics':
+                render_module_analytics("课中互动")
+            elif current == 'system_settings':
+                render_system_settings()
+            else:
+                render_teacher_dashboard()
         else:
-            render_teacher_dashboard()
-    else:
-        # 学生端
-        if current == 'home':
-            render_home_page(user)
-        elif current == 'case_library':
-            render_case_library()
-        elif current == 'knowledge_graph':
-            render_knowledge_graph()
-        elif current == 'ability_recommender':
-            render_ability_recommender()
-        elif current == 'classroom':
-            render_classroom_interaction()
-        else:
-            render_home_page(user)
+            # 学生端
+            if current == 'home':
+                render_home_page(user)
+            elif current == 'case_library':
+                render_case_library()
+            elif current == 'knowledge_graph':
+                render_knowledge_graph()
+            elif current == 'ability_recommender':
+                render_ability_recommender()
+            elif current == 'classroom':
+                render_classroom_interaction()
+            else:
+                render_home_page(user)
+    except Exception as e:
+        st.error(f"⚠️ 页面加载出错：{str(e)}")
+        st.info("请点击顶部导航按钮返回首页，或点击下方按钮重新尝试")
+        if st.button("🏠 返回首页", type="primary"):
+            st.session_state.current_page = 'home'
+            st.rerun()
 
 def render_teacher_dashboard():
     """渲染教师端数据概览首页"""
@@ -834,7 +831,6 @@ def render_home_page(user):
         """, unsafe_allow_html=True)
         if st.button("进入病例库", key="btn_case", use_container_width=True):
             st.session_state.current_page = 'case_library'
-            st.rerun()
     
     with col2:
         st.markdown("""
@@ -846,7 +842,6 @@ def render_home_page(user):
         """, unsafe_allow_html=True)
         if st.button("进入图谱", key="btn_graph", use_container_width=True):
             st.session_state.current_page = 'knowledge_graph'
-            st.rerun()
     
     with col3:
         st.markdown("""
@@ -858,7 +853,6 @@ def render_home_page(user):
         """, unsafe_allow_html=True)
         if st.button("进入推荐", key="btn_ability", use_container_width=True):
             st.session_state.current_page = 'ability_recommender'
-            st.rerun()
     
     with col4:
         st.markdown("""
@@ -870,7 +864,6 @@ def render_home_page(user):
         """, unsafe_allow_html=True)
         if st.button("进入互动", key="btn_class", use_container_width=True):
             st.session_state.current_page = 'classroom'
-            st.rerun()
     
     # 技术栈展示
     st.markdown("<br><br>", unsafe_allow_html=True)
