@@ -552,7 +552,7 @@ def main():
     
     # 导航按钮行
     if user['role'] == 'teacher':
-        nav_cols = st.columns([1, 1, 1, 1, 1, 1])
+        nav_cols = st.columns([1, 1, 1, 1, 1, 1, 1])
         with nav_cols[0]:
             if st.button("🏠 首页", key="nav_home_t", use_container_width=True):
                 st.session_state.current_page = 'home'
@@ -574,6 +574,10 @@ def main():
                 st.session_state.current_page = 'interaction_analytics'
                 st.rerun()
         with nav_cols[5]:
+            if st.button("⚙️ 系统设置", key="nav_settings_t", use_container_width=True):
+                st.session_state.current_page = 'system_settings'
+                st.rerun()
+        with nav_cols[6]:
             if st.button("🚪 退出登录", key="nav_logout_t", use_container_width=True):
                 logout()
                 st.rerun()
@@ -754,6 +758,133 @@ def render_home_page(user):
         © 2026 牙周病学自适应学习系统 · Powered by AI Technology
     </div>
     """, unsafe_allow_html=True)
+
+def render_module_analytics(module_name):
+    """渲染教师端模块数据分析页面"""
+    import random
+    
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                padding: 25px; border-radius: 16px; margin-bottom: 30px;">
+        <h2 style="margin: 0; color: white;">📊 {module_name} - 数据分析</h2>
+        <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9);">
+            查看学生在该模块的学习情况和整体数据统计
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 选项卡：个人数据 / 整体数据
+    tab1, tab2 = st.tabs(["👤 学生个人数据", "📈 整体统计数据"])
+    
+    with tab1:
+        st.markdown("### 🔍 查询学生学习数据")
+        
+        # 模拟学生列表
+        students = ["张三", "李四", "王五", "赵六", "钱七", "孙八", "周九", "吴十"]
+        selected_student = st.selectbox("选择学生", students, key=f"select_{module_name}")
+        
+        if selected_student:
+            st.markdown(f"#### {selected_student} 的{module_name}学习数据")
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("学习时长", f"{random.randint(30, 180)} 分钟", f"+{random.randint(5, 20)}%")
+            with col2:
+                st.metric("完成进度", f"{random.randint(40, 100)}%", f"+{random.randint(5, 15)}%")
+            with col3:
+                st.metric("正确率", f"{random.randint(60, 95)}%", f"+{random.randint(1, 10)}%")
+            with col4:
+                st.metric("活跃度", f"{random.randint(70, 100)}分", f"+{random.randint(2, 8)}")
+            
+            # 学习记录
+            st.markdown("##### 📋 最近学习记录")
+            records = []
+            for i in range(5):
+                records.append({
+                    "日期": f"2026-01-0{5-i}",
+                    "学习内容": f"{module_name}内容{i+1}",
+                    "时长(分钟)": random.randint(15, 60),
+                    "完成状态": random.choice(["✅ 已完成", "🔄 进行中", "⏸️ 暂停"])
+                })
+            import pandas as pd
+            st.dataframe(pd.DataFrame(records), use_container_width=True, hide_index=True)
+    
+    with tab2:
+        st.markdown("### 📊 整体统计数据")
+        
+        # 整体统计卡片
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.markdown("""
+            <div class="stat-card">
+                <div class="stat-number">156</div>
+                <div class="stat-label">👥 总学习人数</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col2:
+            st.markdown("""
+            <div class="stat-card">
+                <div class="stat-number">2,340</div>
+                <div class="stat-label">⏱️ 总学习时长(分)</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col3:
+            st.markdown("""
+            <div class="stat-card">
+                <div class="stat-number">78%</div>
+                <div class="stat-label">✅ 平均完成率</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col4:
+            st.markdown("""
+            <div class="stat-card">
+                <div class="stat-number">85%</div>
+                <div class="stat-label">🎯 平均正确率</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # 图表展示
+        import plotly.express as px
+        import pandas as pd
+        
+        col_chart1, col_chart2 = st.columns(2)
+        
+        with col_chart1:
+            st.markdown("##### 📈 近7天学习人数趋势")
+            dates = [f"01-{i:02d}" for i in range(1, 8)]
+            counts = [random.randint(20, 50) for _ in range(7)]
+            df = pd.DataFrame({"日期": dates, "学习人数": counts})
+            fig = px.line(df, x="日期", y="学习人数", markers=True)
+            fig.update_traces(line_color='#667eea')
+            fig.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20))
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col_chart2:
+            st.markdown("##### 🥧 学习进度分布")
+            progress_data = pd.DataFrame({
+                "进度": ["未开始", "进行中", "已完成"],
+                "人数": [random.randint(10, 30), random.randint(40, 80), random.randint(50, 100)]
+            })
+            fig = px.pie(progress_data, values="人数", names="进度", 
+                        color_discrete_sequence=['#e8eaf6', '#667eea', '#764ba2'])
+            fig.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20))
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # 学生排行榜
+        st.markdown("##### 🏆 学习排行榜 (Top 10)")
+        leaderboard = []
+        names = ["张三", "李四", "王五", "赵六", "钱七", "孙八", "周九", "吴十", "郑九", "王十"]
+        for i, name in enumerate(names):
+            leaderboard.append({
+                "排名": f"🥇" if i == 0 else (f"🥈" if i == 1 else (f"🥉" if i == 2 else f"{i+1}")),
+                "学生": name,
+                "学习时长(分)": random.randint(100, 300) - i * 15,
+                "完成进度": f"{95 - i * 5}%",
+                "正确率": f"{92 - i * 3}%"
+            })
+        st.dataframe(pd.DataFrame(leaderboard), use_container_width=True, hide_index=True)
 
 def render_system_settings():
     """渲染系统设置页面（仅教师可用）"""
